@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentScope Java Demo</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f4efe6;
+            --panel: rgba(255, 252, 247, 0.92);
+            --ink: #1e2430;
+            --muted: #5e6675;
+            --accent: #d95d39;
+            --accent-deep: #8f2d1f;
+            --line: rgba(30, 36, 48, 0.12);
+            --shadow: 0 24px 60px rgba(63, 43, 27, 0.16);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(217, 93, 57, 0.18), transparent 30%),
+                radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.12), transparent 28%),
+                linear-gradient(160deg, #f8f1e5 0%, #efe7dc 48%, #f9f6f0 100%);
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .shell {
+            width: min(920px, 100%);
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            backdrop-filter: blur(14px);
+        }
+
+        .hero {
+            padding: 32px 32px 20px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--accent-deep);
+            font-weight: 700;
+        }
+
+        h1 {
+            margin: 14px 0 10px;
+            font-size: clamp(32px, 5vw, 54px);
+            line-height: 0.96;
+        }
+
+        .hero p {
+            margin: 0;
+            max-width: 680px;
+            color: var(--muted);
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+        }
+
+        .panel {
+            padding: 28px 32px 32px;
+        }
+
+        .panel + .panel {
+            border-left: 1px solid var(--line);
+            background: rgba(250, 246, 240, 0.8);
+        }
+
+        label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 180px;
+            resize: vertical;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            padding: 18px;
+            font: inherit;
+            color: var(--ink);
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        textarea:focus {
+            outline: 2px solid rgba(217, 93, 57, 0.22);
+            border-color: rgba(217, 93, 57, 0.45);
+        }
+
+        .actions {
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            border: none;
+            border-radius: 999px;
+            padding: 13px 22px;
+            font: inherit;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+            cursor: pointer;
+            transition: transform 140ms ease, box-shadow 140ms ease;
+            box-shadow: 0 14px 28px rgba(143, 45, 31, 0.28);
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            cursor: wait;
+            opacity: 0.75;
+            transform: none;
+        }
+
+        .status {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .answer-box {
+            min-height: 250px;
+            border-radius: 20px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.72);
+            padding: 20px;
+            white-space: pre-wrap;
+            line-height: 1.7;
+        }
+
+        .tips {
+            margin-top: 18px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            background: rgba(30, 36, 48, 0.04);
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .runtime {
+            margin-top: 18px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            background: rgba(217, 93, 57, 0.08);
+            color: var(--ink);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.95em;
+        }
+
+        @media (max-width: 760px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .panel + .panel {
+                border-left: none;
+                border-top: 1px solid var(--line);
+            }
+
+            .hero,
+            .panel {
+                padding-left: 22px;
+                padding-right: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+<main class="shell">
+    <section class="hero">
+        <div class="eyebrow">Preview Ready</div>
+        <h1>AgentScope Java Demo</h1>
+        <p>
+            This page calls the Spring Boot endpoint at <code>POST /api/chat</code>.
+            If the page opens but replies fail, check whether <code>OPENAI_API_KEY</code>
+            and <code>AGENTSCOPE_OPENAI_MODEL_NAME</code> are configured in your IDEA Run Configuration.
+        </p>
+    </section>
+
+    <section class="grid">
+        <div class="panel">
+            <label for="prompt">Prompt</label>
+            <textarea id="prompt" placeholder="Ask something about AgentScope Java...">Introduce AgentScope Java in one short paragraph.</textarea>
+            <div class="actions">
+                <button id="send" type="button">Send Request</button>
+                <span id="status" class="status">Ready.</span>
+            </div>
+        </div>
+
+        <div class="panel">
+            <label for="answer">Response</label>
+            <div id="answer" class="answer-box">Your model response will appear here.</div>
+            <div class="tips">
+                SiliconFlow example:
+                <code>OPENAI_BASE_URL=https://api.siliconflow.cn/v1</code>,
+                <code>AGENTSCOPE_OPENAI_MODEL_NAME=Pro/zai-org/GLM-4.7</code>,
+                plus your <code>OPENAI_API_KEY</code>.
+                Put <code>.md</code> or <code>.txt</code> files under <code>data/knowledge</code>
+                to enable local RAG context.
+            </div>
+            <div id="runtime" class="runtime">Loading runtime config...</div>
+        </div>
+    </section>
+</main>
+
+<script>
+    const promptInput = document.getElementById("prompt");
+    const sendButton = document.getElementById("send");
+    const statusText = document.getElementById("status");
+    const answerBox = document.getElementById("answer");
+    const runtimeBox = document.getElementById("runtime");
+
+    async function loadRuntimeConfig() {
+        try {
+            const response = await fetch("/api/config");
+            const config = await response.json();
+            runtimeBox.innerHTML =
+                "Runtime config:<br>" +
+                "modelName = <code>" + (config.modelName || "(empty)") + "</code><br>" +
+                "baseUrl = <code>" + (config.baseUrl || "(empty)") + "</code><br>" +
+                "apiKeyConfigured = <code>" + config.apiKeyConfigured + "</code><br>" +
+                "ragEnabled = <code>" + config.ragEnabled + "</code><br>" +
+                "ragKnowledgeDir = <code>" + (config.ragKnowledgeDir || "(empty)") + "</code><br>" +
+                "ragTopK = <code>" + config.ragTopK + "</code>";
+        } catch (error) {
+            runtimeBox.textContent = "Failed to load runtime config: " + error.message;
+        }
+    }
+
+    async function sendPrompt() {
+        const message = promptInput.value.trim();
+        if (!message) {
+            statusText.textContent = "Please enter a prompt first.";
+            answerBox.textContent = "Request was not sent because the prompt is empty.";
+            return;
+        }
+
+        sendButton.disabled = true;
+        statusText.textContent = "Calling /api/chat...";
+        answerBox.textContent = "Waiting for response...";
+
+        try {
+            const response = await fetch("/api/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ message })
+            });
+
+            const text = await response.text();
+            let payload = null;
+
+            if (text) {
+                try {
+                    payload = JSON.parse(text);
+                } catch (error) {
+                    payload = null;
+                }
+            }
+
+            if (!response.ok) {
+                const messageText = payload && payload.message ? payload.message : text || "Request failed.";
+                throw new Error(messageText);
+            }
+
+            answerBox.textContent = payload && payload.answer ? payload.answer : "(No answer returned)";
+            statusText.textContent = "Completed.";
+        } catch (error) {
+            answerBox.textContent = "Request failed: " + error.message;
+            statusText.textContent = "Failed.";
+        } finally {
+            sendButton.disabled = false;
+        }
+    }
+
+    sendButton.addEventListener("click", sendPrompt);
+    promptInput.addEventListener("keydown", (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+            sendPrompt();
+        }
+    });
+
+    loadRuntimeConfig();
+</script>
+</body>
+</html>
