@@ -34,7 +34,7 @@ public class OpenAiAgentChatService implements AgentChatService {
     }
 
     @Override
-    public String chat(String message) {
+    public String chat(String conversationId, String message) {
         if (!StringUtils.hasText(apiKey)) {
             throw new IllegalStateException("OPENAI_API_KEY is not configured.");
         }

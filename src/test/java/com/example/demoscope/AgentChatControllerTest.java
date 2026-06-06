@@ -40,7 +40,21 @@ class AgentChatControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "conversationId": "conversation-a",
                                   "message": "   "
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void chatRejectsBlankConversationId() throws Exception {
+        mockMvc.perform(post("/api/chat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "conversationId": "   ",
+                                  "message": "Hello"
                                 }
                                 """))
                 .andExpect(status().isBadRequest());
@@ -52,6 +66,7 @@ class AgentChatControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "conversationId": "conversation-a",
                                   "message": "Introduce AgentScope Java"
                                 }
                                 """))
