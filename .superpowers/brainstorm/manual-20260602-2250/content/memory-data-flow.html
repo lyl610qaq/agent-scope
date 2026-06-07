@@ -1,0 +1,37 @@
+<h2>Runtime and indexing flow</h2>
+<p class="subtitle">Two separate paths: chat-time retrieval for answering, and manual reindex for syncing local knowledge into pgvector.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Chat request flow</div>
+    <div class="mockup-body">
+      <div style="display:grid;gap:12px">
+        <div class="placeholder"><strong>1. User sends</strong><br>message + conversationId</div>
+        <div class="placeholder"><strong>2. Retrieve memory</strong><br>short-term recent turns + long-term low-risk facts</div>
+        <div class="placeholder"><strong>3. Retrieve RAG</strong><br>question -> SiliconFlow embedding -> pgvector topK search</div>
+        <div class="placeholder"><strong>4. Assemble prompt</strong><br>system prompt + memory + RAG + user message</div>
+        <div class="placeholder"><strong>5. Call agent</strong><br>ReActAgent / configured chat model</div>
+        <div class="placeholder"><strong>6. Update memory</strong><br>append short-term turn; extract low-risk long-term memory</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Manual knowledge reindex flow</div>
+    <div class="mockup-body">
+      <div style="display:grid;gap:12px">
+        <div class="placeholder"><strong>1. Trigger</strong><br>POST /api/knowledge/reindex</div>
+        <div class="placeholder"><strong>2. Scan files</strong><br>data/knowledge .md and .txt</div>
+        <div class="placeholder"><strong>3. Chunk</strong><br>normalize text and split into stable chunks</div>
+        <div class="placeholder"><strong>4. Embed</strong><br>SiliconFlow Qwen/Qwen3-Embedding-4B, dimensions 1024</div>
+        <div class="placeholder"><strong>5. Store</strong><br>upsert source, content, checksum, metadata, vector(1024)</div>
+        <div class="placeholder"><strong>6. Report</strong><br>indexed count, skipped count, failures</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Important boundary</h3>
+  <p>Chat requests never rescan files. They only query already-indexed pgvector rows. Reindex is explicit because it calls an external embedding API.</p>
+</div>

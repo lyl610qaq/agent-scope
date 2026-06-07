@@ -1,0 +1,76 @@
+<h2>Agent Memory Layer: current map</h2>
+<p class="subtitle">A discussion draft for placing short-term memory, long-term memory, and RAG in the current Spring Boot AgentScope demo.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Current request path and proposed memory insertion points</div>
+  <div class="mockup-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-items:stretch">
+      <div class="placeholder" style="min-height:116px">
+        <strong>Client</strong><br>
+        static/index.html<br>
+        POST /api/chat
+      </div>
+      <div class="placeholder" style="min-height:116px">
+        <strong>Controller</strong><br>
+        AgentChatController<br>
+        validates message
+      </div>
+      <div class="placeholder" style="min-height:116px">
+        <strong>Chat Service</strong><br>
+        OpenAiAgentChatService<br>
+        builds model input
+      </div>
+    </div>
+
+    <div style="text-align:center;margin:14px 0;color:#667085">Then the service composes memory + RAG context before calling the model</div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+      <div class="placeholder" style="min-height:150px;border-color:#7c3aed;background:#f5f3ff">
+        <strong>Short-term memory</strong><br>
+        Recent turns, active task state, session-scoped notes.<br><br>
+        Best for: coherence in the current chat.
+      </div>
+      <div class="placeholder" style="min-height:150px;border-color:#0891b2;background:#ecfeff">
+        <strong>Long-term memory</strong><br>
+        Durable user preferences, stable facts, learned project context.<br><br>
+        Best for: personalization and continuity.
+      </div>
+      <div class="placeholder" style="min-height:150px;border-color:#16a34a;background:#f0fdf4">
+        <strong>RAG</strong><br>
+        External knowledge chunks from files or vector/index retrieval.<br><br>
+        Best for: source-grounded answers.
+      </div>
+    </div>
+
+    <div style="text-align:center;margin:14px 0;color:#667085">Prompt assembly</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="placeholder" style="min-height:112px">
+        <strong>MemoryContextBuilder</strong><br>
+        Selects, ranks, compresses, and labels memory context.
+      </div>
+      <div class="placeholder" style="min-height:112px">
+        <strong>RagPromptBuilder</strong><br>
+        Existing builder can evolve into a unified prompt/context builder.
+      </div>
+    </div>
+
+    <div style="text-align:center;margin:14px 0;color:#667085">Model call and post-turn updates</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="placeholder" style="min-height:104px">
+        <strong>ReActAgent + OpenAIChatModel</strong><br>
+        Receives assembled context and user message.
+      </div>
+      <div class="placeholder" style="min-height:104px">
+        <strong>Memory update policy</strong><br>
+        Decides what to store after the response.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Key design tension</h3>
+  <p>Short-term memory should be cheap and session-safe. Long-term memory needs stricter write rules. RAG should stay source-grounded and not blur into personal memory.</p>
+</div>

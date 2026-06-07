@@ -1,0 +1,68 @@
+<h2>Layered memory architecture</h2>
+<p class="subtitle">Recommended design: keep short-term memory, long-term memory, and pgvector RAG separate, with one orchestrator assembling context for the agent.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Chat-time flow</div>
+  <div class="mockup-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+      <div class="placeholder" style="min-height:110px">
+        <strong>AgentChatController</strong><br>
+        accepts message + conversationId
+      </div>
+      <div class="placeholder" style="min-height:110px;border-color:#7c3aed;background:#f5f3ff">
+        <strong>MemoryOrchestrator</strong><br>
+        retrieves context from all layers
+      </div>
+      <div class="placeholder" style="min-height:110px">
+        <strong>OpenAiAgentChatService</strong><br>
+        calls ReActAgent + chat model
+      </div>
+    </div>
+
+    <div style="text-align:center;margin:14px 0;color:#667085">Context sources</div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+      <div class="placeholder" style="min-height:150px;border-color:#8b5cf6;background:#f5f3ff">
+        <strong>ShortTermMemoryStore</strong><br>
+        recent turns keyed by conversationId<br><br>
+        storage: in-memory map
+      </div>
+      <div class="placeholder" style="min-height:150px;border-color:#0891b2;background:#ecfeff">
+        <strong>LongTermMemoryStore</strong><br>
+        low-risk stable facts and preferences<br><br>
+        storage: local JSON file
+      </div>
+      <div class="placeholder" style="min-height:150px;border-color:#16a34a;background:#f0fdf4">
+        <strong>VectorKnowledgeStore</strong><br>
+        pgvector semantic knowledge retrieval<br><br>
+        storage: PostgreSQL + pgvector
+      </div>
+    </div>
+
+    <div style="text-align:center;margin:14px 0;color:#667085">Embedding and indexing path</div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+      <div class="placeholder" style="min-height:112px">
+        <strong>data/knowledge</strong><br>
+        .md / .txt files
+      </div>
+      <div class="placeholder" style="min-height:112px">
+        <strong>KnowledgeIndexer</strong><br>
+        chunks files
+      </div>
+      <div class="placeholder" style="min-height:112px;border-color:#d97706;background:#fffbeb">
+        <strong>SiliconFlowEmbeddingClient</strong><br>
+        Qwen3-Embedding-4B, 1024 dims
+      </div>
+      <div class="placeholder" style="min-height:112px;border-color:#16a34a;background:#f0fdf4">
+        <strong>knowledge_chunks</strong><br>
+        content + source + vector(1024)
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Why this shape</h3>
+  <p>The chat service stays focused on model calls. Memory stores stay independently testable. RAG uses pgvector now, while short-term and long-term memory keep their own safety boundaries.</p>
+</div>

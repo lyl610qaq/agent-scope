@@ -1,0 +1,67 @@
+<h2>Agent memory layer: lightweight version</h2>
+<p class="subtitle">Discussion draft for adding short-term memory, long-term memory, and RAG to the current Spring Boot AgentScope demo.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Request path and memory insertion points</div>
+  <div class="mockup-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-items:stretch">
+      <div class="placeholder" style="min-height:108px">
+        <strong>Client</strong><br>
+        static/index.html<br>
+        POST /api/chat
+      </div>
+      <div class="placeholder" style="min-height:108px">
+        <strong>Controller</strong><br>
+        AgentChatController<br>
+        validates input
+      </div>
+      <div class="placeholder" style="min-height:108px">
+        <strong>Chat service</strong><br>
+        OpenAiAgentChatService<br>
+        orchestrates context
+      </div>
+    </div>
+
+    <div style="text-align:center;margin:14px 0;color:#667085">Context layers assembled before the model call</div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+      <div class="placeholder" style="min-height:156px;border-color:#7c3aed;background:#f5f3ff">
+        <strong>1. Short-term memory</strong><br>
+        Recent turns in the current session.<br><br>
+        Likely storage: in-memory map keyed by conversation id.
+      </div>
+      <div class="placeholder" style="min-height:156px;border-color:#0891b2;background:#ecfeff">
+        <strong>2. Long-term memory</strong><br>
+        Durable facts/preferences extracted from conversations.<br><br>
+        Likely storage: local JSON file for the demo.
+      </div>
+      <div class="placeholder" style="min-height:156px;border-color:#16a34a;background:#f0fdf4">
+        <strong>3. RAG</strong><br>
+        External knowledge chunks from local files.<br><br>
+        Existing storage: data/knowledge markdown and text files.
+      </div>
+    </div>
+
+    <div style="text-align:center;margin:14px 0;color:#667085">Prompt assembly and post-turn update</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+      <div class="placeholder" style="min-height:120px">
+        <strong>MemoryRetriever</strong><br>
+        Selects relevant short and long memory.
+      </div>
+      <div class="placeholder" style="min-height:120px">
+        <strong>PromptContextBuilder</strong><br>
+        Labels memory and RAG context clearly.
+      </div>
+      <div class="placeholder" style="min-height:120px">
+        <strong>MemoryWriter</strong><br>
+        Decides what to append after response.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Current selected direction</h3>
+  <p>Lightweight demo implementation: in-memory short-term memory, local-file long-term memory, and the existing local RAG store. The design should keep interfaces clean enough to replace storage later, but avoid production-heavy concerns for now.</p>
+</div>
