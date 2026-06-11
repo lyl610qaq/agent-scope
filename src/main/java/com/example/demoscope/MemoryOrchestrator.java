@@ -32,14 +32,15 @@ public class MemoryOrchestrator {
         this.clock = clock;
     }
 
-    public MemoryContext prepare(String conversationId, String query) {
+    public MemoryContext prepare(String userId, String conversationId, String query) {
         List<MemoryTurn> shortTerm = safelyReadShortTerm(conversationId);
-        List<LongTermMemory> longTerm = safelyReadLongTerm(query);
+        List<LongTermMemory> longTerm = safelyReadLongTerm(userId, query);
         List<KnowledgeChunk> knowledge = safelyRetrieveKnowledge(query);
         return new MemoryContext(shortTerm, longTerm, knowledge);
     }
 
     public void recordTurn(
+            String userId,
             String conversationId,
             String userMessage,
             String assistantMessage) {
@@ -63,7 +64,7 @@ public class MemoryOrchestrator {
                 continue;
             }
             try {
-                longTermMemoryRepository.save(conversationId, candidate);
+                longTermMemoryRepository.save(userId, conversationId, candidate);
             } catch (RuntimeException ex) {
                 log.warn("Failed to persist long-term memory candidate", ex);
             }
@@ -79,9 +80,9 @@ public class MemoryOrchestrator {
         }
     }
 
-    private List<LongTermMemory> safelyReadLongTerm(String query) {
+    private List<LongTermMemory> safelyReadLongTerm(String userId, String query) {
         try {
-            return longTermMemoryRepository.findRelevant(query);
+            return longTermMemoryRepository.findRelevant(userId, query);
         } catch (RuntimeException ex) {
             log.warn("Failed to read long-term memory", ex);
             return List.of();

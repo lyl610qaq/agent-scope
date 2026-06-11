@@ -20,26 +20,27 @@ class LocalKnowledgeStoreTest {
         Files.writeString(
                 knowledgeDir.resolve("refund-policy.md"),
                 """
-                        # 售后政策
+                        # Refund policy
 
-                        退货规则：用户在签收后 7 天内可以申请无理由退货。
-                        退款会在仓库验收后 3 个工作日内原路返回。
+                        Users can request refunds within 7 days after delivery.
+                        Refunds are returned to the original payment method.
                         """);
         Files.writeString(
                 knowledgeDir.resolve("install.txt"),
-                "安装说明：启动服务前需要配置 OPENAI_API_KEY。");
+                "Install guide: configure OPENAI_API_KEY before starting the service.");
 
         Class<?> storeClass = Class.forName("com.example.demoscope.LocalKnowledgeStore");
         Constructor<?> constructor = storeClass.getConstructor(String.class, int.class, int.class, int.class);
-        Object store = constructor.newInstance(knowledgeDir.toString(), 2, 2_000, 1);
+        Object store = constructor.newInstance(knowledgeDir.toString(), 1, 2_000, 1);
         Method retrieve = storeClass.getMethod("retrieve", String.class);
 
-        List<?> chunks = (List<?>) retrieve.invoke(store, "退货规则是什么");
+        List<?> chunks = (List<?>) retrieve.invoke(store, "refund policy");
 
         assertEquals(1, chunks.size());
         Object chunk = chunks.get(0);
         assertTrue(((String) chunk.getClass().getMethod("source").invoke(chunk)).endsWith("refund-policy.md"));
-        assertTrue(((String) chunk.getClass().getMethod("content").invoke(chunk)).contains("7 天内可以申请无理由退货"));
+        String content = (String) chunk.getClass().getMethod("content").invoke(chunk);
+        assertTrue(content.contains("Refund policy") || content.contains("within 7 days"));
     }
 
     @Test

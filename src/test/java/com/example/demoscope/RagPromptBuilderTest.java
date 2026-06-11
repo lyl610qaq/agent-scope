@@ -15,7 +15,7 @@ class RagPromptBuilderTest {
     void keepsOriginalMessageWhenRagIsDisabled() throws Exception {
         Object builder = builder(false);
 
-        assertEquals("你好", build(builder, "你好", List.of(chunk("doc.md", "资料"))));
+        assertEquals("hello", build(builder, "hello", List.of(chunk("doc.md", "context"))));
     }
 
     @Test
@@ -24,20 +24,20 @@ class RagPromptBuilderTest {
 
         String prompt = build(
                 builder,
-                "退货规则是什么",
-                List.of(chunk("refund-policy.md", "用户签收后 7 天内可以申请无理由退货。")));
+                "What is the refund policy?",
+                List.of(chunk("refund-policy.md", "Users can request refunds within 7 days.")));
 
-        assertTrue(prompt.contains("请优先依据下面的本地知识库资料回答"));
+        assertTrue(prompt.contains("Answer using the local knowledge base first"));
         assertTrue(prompt.contains("[1] refund-policy.md"));
-        assertTrue(prompt.contains("用户签收后 7 天内可以申请无理由退货。"));
-        assertTrue(prompt.endsWith("用户问题：\n退货规则是什么"));
+        assertTrue(prompt.contains("Users can request refunds within 7 days."));
+        assertTrue(prompt.endsWith("User question:\nWhat is the refund policy?"));
     }
 
     @Test
     void keepsOriginalMessageWhenNoContextWasRetrieved() throws Exception {
         Object builder = builder(true);
 
-        assertEquals("你好", build(builder, "你好", List.of()));
+        assertEquals("hello", build(builder, "hello", List.of()));
     }
 
     private Object builder(boolean enabled) throws Exception {

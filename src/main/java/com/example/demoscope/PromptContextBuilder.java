@@ -4,15 +4,15 @@ public class PromptContextBuilder {
 
     public String build(String systemInstructions, MemoryContext context, String userMessage) {
         StringBuilder prompt = new StringBuilder();
-        appendSection(prompt, "系统指令", systemInstructions);
+        appendSection(prompt, "System instructions", systemInstructions);
 
         if (!context.shortTermTurns().isEmpty()) {
             StringBuilder turns = new StringBuilder();
             for (MemoryTurn turn : context.shortTermTurns()) {
-                turns.append("用户：").append(turn.userMessage()).append('\n')
-                        .append("助手：").append(turn.assistantMessage()).append('\n');
+                turns.append("User: ").append(turn.userMessage()).append('\n')
+                        .append("Assistant: ").append(turn.assistantMessage()).append('\n');
             }
-            appendSection(prompt, "短期记忆", turns.toString().trim());
+            appendSection(prompt, "Short-term memory", turns.toString().trim());
         }
 
         if (!context.longTermMemories().isEmpty()) {
@@ -24,7 +24,7 @@ public class PromptContextBuilder {
                         .append(memory.text())
                         .append('\n');
             }
-            appendSection(prompt, "长期记忆", memories.toString().trim());
+            appendSection(prompt, "Long-term memory", memories.toString().trim());
         }
 
         if (!context.knowledgeChunks().isEmpty()) {
@@ -35,15 +35,15 @@ public class PromptContextBuilder {
                         .append(chunk.source()).append('\n')
                         .append(chunk.content()).append('\n');
             }
-            appendSection(prompt, "知识库资料", knowledge.toString().trim());
+            appendSection(prompt, "Knowledge base", knowledge.toString().trim());
         }
 
-        prompt.append("用户问题：\n").append(userMessage);
+        prompt.append("User question:\n").append(userMessage);
         return prompt.toString();
     }
 
     private void appendSection(StringBuilder target, String title, String content) {
-        target.append(title).append("：\n")
+        target.append(title).append(":\n")
                 .append(content)
                 .append("\n\n");
     }

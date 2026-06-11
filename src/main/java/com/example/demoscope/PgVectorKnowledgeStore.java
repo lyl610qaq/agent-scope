@@ -10,20 +10,22 @@ public class PgVectorKnowledgeStore implements KnowledgeRetriever {
             select source, content, embedding <=> ?::vector as distance
             from knowledge_chunks
             """;
-
     private final JdbcOperations jdbc;
     private final EmbeddingClient embeddingClient;
     private final int topK;
+    private final int embeddingDimensions;
     private final Double maxDistance;
 
     public PgVectorKnowledgeStore(
             JdbcOperations jdbc,
             EmbeddingClient embeddingClient,
             int topK,
+            int embeddingDimensions,
             Double maxDistance) {
         this.jdbc = jdbc;
         this.embeddingClient = embeddingClient;
         this.topK = topK;
+        this.embeddingDimensions = embeddingDimensions;
         this.maxDistance = maxDistance;
     }
 
@@ -48,6 +50,26 @@ public class PgVectorKnowledgeStore implements KnowledgeRetriever {
                 vector,
                 maxDistance,
                 topK);
+    }
+
+    public void initializeSchema() {
+        jdbc.execute("create extension if not exists vector");
+        jdbc.execute(createTableSql());
+    }
+
+    private String createTableSql() {
+        return """
+                create table if not exists knowledge_chunks (
+                    id bigserial primary key,
+                    source text not null,
+                    chunk_index integer not null,
+                    content text not null,
+                    checksum char(64) not null,
+                    embedding vector(%d) not null,
+                    updated_at timestamptz not null default now(),
+                    unique (source, chunk_index)
+                )
+                """.formatted(embeddingDimensions);
     }
 
     static String serializeVector(float[] vector) {

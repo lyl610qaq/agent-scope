@@ -4,7 +4,7 @@ import java.util.List;
 
 public interface LongTermMemoryRepository {
 
-    List<LongTermMemory> findRelevant(String query);
+    List<LongTermMemory> findRelevant(String userId, String query);
 
-    void save(String conversationId, LongTermMemoryCandidate candidate);
+    void save(String userId, String conversationId, LongTermMemoryCandidate candidate);
 }

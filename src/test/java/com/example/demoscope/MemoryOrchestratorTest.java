@@ -13,6 +13,23 @@ import org.junit.jupiter.api.Test;
 class MemoryOrchestratorTest {
 
     @Test
+    void preparesContextUsingAuthenticatedUserId() {
+        CapturingLongTermRepository longTerm = new CapturingLongTermRepository();
+        MemoryOrchestrator orchestrator = new MemoryOrchestrator(
+                new FixedShortTermStore(List.of()),
+                longTerm,
+                query -> List.of(),
+                turn -> List.of(),
+                new LongTermMemoryPolicy(),
+                fixedClock());
+
+        orchestrator.prepare("user-42", "conversation-a", "favorite language?");
+
+        assertEquals("user-42", longTerm.lastUserId);
+        assertEquals("favorite language?", longTerm.lastQuery);
+    }
+
+    @Test
     void degradesFailedLongTermAndKnowledgeReadsToEmptyContext() {
         MemoryTurn turn = new MemoryTurn("old", "answer", Instant.parse("2026-06-06T10:00:00Z"));
         ShortTermMemoryStore shortTerm = new FixedShortTermStore(List.of(turn));
@@ -29,7 +46,7 @@ class MemoryOrchestratorTest {
                 new LongTermMemoryPolicy(),
                 fixedClock());
 
-        MemoryContext context = orchestrator.prepare("conversation-a", "question");
+        MemoryContext context = orchestrator.prepare("user-42", "conversation-a", "question");
 
         assertEquals(List.of(turn), context.shortTermTurns());
         assertEquals(List.of(), context.longTermMemories());
@@ -43,7 +60,7 @@ class MemoryOrchestratorTest {
         LongTermMemoryExtractor extractor = ignored -> List.of(
                 new LongTermMemoryCandidate(
                         LongTermMemoryCategory.PREFERENCE,
-                        "用户偏好中文回答",
+                        "user prefers concise answers",
                         0.9),
                 new LongTermMemoryCandidate(
                         LongTermMemoryCategory.COMMON_CONFIG,
@@ -57,11 +74,13 @@ class MemoryOrchestratorTest {
                 new LongTermMemoryPolicy(),
                 fixedClock());
 
-        orchestrator.recordTurn("conversation-a", "hello", "你好");
+        orchestrator.recordTurn("user-42", "conversation-a", "hello", "hello");
 
         assertEquals(1, shortTerm.turns.size());
         assertEquals(1, longTerm.saved.size());
-        assertEquals("用户偏好中文回答", longTerm.saved.get(0).text());
+        assertEquals("user-42", longTerm.savedUserId);
+        assertEquals("conversation-a", longTerm.savedConversationId);
+        assertEquals("user prefers concise answers", longTerm.saved.get(0).text());
     }
 
     private Clock fixedClock() {
@@ -101,25 +120,33 @@ class MemoryOrchestratorTest {
 
     private static final class FailingLongTermRepository implements LongTermMemoryRepository {
         @Override
-        public List<LongTermMemory> findRelevant(String query) {
+        public List<LongTermMemory> findRelevant(String userId, String query) {
             throw new IllegalStateException("file unavailable");
         }
 
         @Override
-        public void save(String conversationId, LongTermMemoryCandidate candidate) {
+        public void save(String userId, String conversationId, LongTermMemoryCandidate candidate) {
         }
     }
 
     private static final class CapturingLongTermRepository implements LongTermMemoryRepository {
         private final List<LongTermMemoryCandidate> saved = new ArrayList<>();
+        private String lastUserId;
+        private String lastQuery;
+        private String savedUserId;
+        private String savedConversationId;
 
         @Override
-        public List<LongTermMemory> findRelevant(String query) {
+        public List<LongTermMemory> findRelevant(String userId, String query) {
+            this.lastUserId = userId;
+            this.lastQuery = query;
             return List.of();
         }
 
         @Override
-        public void save(String conversationId, LongTermMemoryCandidate candidate) {
+        public void save(String userId, String conversationId, LongTermMemoryCandidate candidate) {
+            this.savedUserId = userId;
+            this.savedConversationId = conversationId;
             saved.add(candidate);
         }
     }

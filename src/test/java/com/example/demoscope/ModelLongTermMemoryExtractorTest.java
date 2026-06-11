@@ -22,7 +22,7 @@ class ModelLongTermMemoryExtractorTest {
                     [
                       {
                         "category": "preference",
-                        "text": "用户偏好中文回答",
+                        "text": "user prefers concise answers",
                         "confidence": 0.92
                       }
                     ]
@@ -33,14 +33,14 @@ class ModelLongTermMemoryExtractorTest {
                 new ObjectMapper());
 
         List<LongTermMemoryCandidate> candidates = extractor.extract(new MemoryTurn(
-                "请一直使用中文回答",
-                "好的",
+                "please keep answers concise",
+                "sure",
                 Instant.parse("2026-06-06T10:00:00Z")));
 
         assertEquals(1, candidates.size());
         assertEquals(LongTermMemoryCategory.PREFERENCE, candidates.get(0).category());
-        assertEquals("用户偏好中文回答", candidates.get(0).text());
-        assertTrue(receivedUserPrompt.get().contains("请一直使用中文回答"));
+        assertEquals("user prefers concise answers", candidates.get(0).text());
+        assertTrue(receivedUserPrompt.get().contains("please keep answers concise"));
     }
 
     @Test

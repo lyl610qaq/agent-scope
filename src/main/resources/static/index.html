@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +7,15 @@
     <style>
         :root {
             color-scheme: light;
-            --bg: #f4efe6;
-            --panel: rgba(255, 252, 247, 0.92);
-            --ink: #1e2430;
-            --muted: #5e6675;
-            --accent: #d95d39;
-            --accent-deep: #8f2d1f;
-            --line: rgba(30, 36, 48, 0.12);
-            --shadow: 0 24px 60px rgba(63, 43, 27, 0.16);
+            --bg: #eef1f4;
+            --panel: #ffffff;
+            --ink: #17202a;
+            --muted: #596574;
+            --accent: #2563eb;
+            --accent-deep: #1d4ed8;
+            --line: #d8dee6;
+            --soft: #f6f8fa;
+            --shadow: 0 10px 30px rgba(23, 32, 42, 0.08);
         }
 
         * {
@@ -26,27 +27,22 @@
             min-height: 100vh;
             font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
             color: var(--ink);
-            background:
-                radial-gradient(circle at top left, rgba(217, 93, 57, 0.18), transparent 30%),
-                radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.12), transparent 28%),
-                linear-gradient(160deg, #f8f1e5 0%, #efe7dc 48%, #f9f6f0 100%);
-            display: grid;
-            place-items: center;
+            background: var(--bg);
             padding: 24px;
         }
 
         .shell {
-            width: min(920px, 100%);
+            width: min(1080px, 100%);
+            margin: 0 auto;
             background: var(--panel);
-            border: 1px solid rgba(255, 255, 255, 0.7);
-            border-radius: 28px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
             box-shadow: var(--shadow);
             overflow: hidden;
-            backdrop-filter: blur(14px);
         }
 
         .hero {
-            padding: 32px 32px 20px;
+            padding: 24px 28px 20px;
             border-bottom: 1px solid var(--line);
         }
 
@@ -55,21 +51,21 @@
             align-items: center;
             gap: 8px;
             font-size: 12px;
-            letter-spacing: 0.12em;
             text-transform: uppercase;
             color: var(--accent-deep);
             font-weight: 700;
         }
 
         h1 {
-            margin: 14px 0 10px;
-            font-size: clamp(32px, 5vw, 54px);
-            line-height: 0.96;
+            margin: 8px 0 8px;
+            font-size: 28px;
+            line-height: 1.2;
+            letter-spacing: 0;
         }
 
         .hero p {
             margin: 0;
-            max-width: 680px;
+            max-width: 760px;
             color: var(--muted);
             font-size: 16px;
             line-height: 1.6;
@@ -77,16 +73,17 @@
 
         .grid {
             display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
+            grid-template-columns: 1fr 1fr;
         }
 
         .panel {
-            padding: 28px 32px 32px;
+            min-width: 0;
+            padding: 24px 28px 28px;
         }
 
         .panel + .panel {
             border-left: 1px solid var(--line);
-            background: rgba(250, 246, 240, 0.8);
+            background: var(--soft);
         }
 
         label {
@@ -95,21 +92,30 @@
             margin-bottom: 10px;
         }
 
+        input,
         textarea {
             width: 100%;
-            min-height: 180px;
-            resize: vertical;
-            border-radius: 18px;
+            border-radius: 6px;
             border: 1px solid var(--line);
-            padding: 18px;
+            padding: 12px 14px;
             font: inherit;
             color: var(--ink);
-            background: rgba(255, 255, 255, 0.8);
+            background: #fff;
         }
 
+        input:focus,
         textarea:focus {
-            outline: 2px solid rgba(217, 93, 57, 0.22);
-            border-color: rgba(217, 93, 57, 0.45);
+            outline: 2px solid rgba(37, 99, 235, 0.18);
+            border-color: var(--accent);
+        }
+
+        textarea {
+            min-height: 180px;
+            resize: vertical;
+        }
+
+        .field + .field {
+            margin-top: 16px;
         }
 
         .actions {
@@ -122,25 +128,24 @@
 
         button {
             border: none;
-            border-radius: 999px;
-            padding: 13px 22px;
+            min-height: 40px;
+            border-radius: 6px;
+            padding: 10px 16px;
             font: inherit;
             font-weight: 700;
             color: #fff;
-            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+            background: var(--accent);
             cursor: pointer;
-            transition: transform 140ms ease, box-shadow 140ms ease;
-            box-shadow: 0 14px 28px rgba(143, 45, 31, 0.28);
+            transition: background 140ms ease;
         }
 
         button:hover {
-            transform: translateY(-1px);
+            background: var(--accent-deep);
         }
 
         button:disabled {
             cursor: wait;
             opacity: 0.75;
-            transform: none;
         }
 
         .status {
@@ -150,32 +155,38 @@
 
         .answer-box {
             min-height: 250px;
-            border-radius: 20px;
+            border-radius: 6px;
             border: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.72);
-            padding: 20px;
+            background: #fff;
+            padding: 16px;
             white-space: pre-wrap;
             line-height: 1.7;
+            overflow-wrap: anywhere;
         }
 
         .tips {
             margin-top: 18px;
-            padding: 16px 18px;
-            border-radius: 18px;
-            background: rgba(30, 36, 48, 0.04);
+            padding: 14px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--line);
+            background: #fff;
             color: var(--muted);
             font-size: 14px;
             line-height: 1.6;
+            overflow-wrap: anywhere;
         }
 
         .runtime {
             margin-top: 18px;
-            padding: 16px 18px;
-            border-radius: 18px;
-            background: rgba(217, 93, 57, 0.08);
+            padding: 14px 16px;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent);
+            background: #eaf1ff;
             color: var(--ink);
             font-size: 14px;
             line-height: 1.7;
+            white-space: pre-line;
+            overflow-wrap: anywhere;
         }
 
         code {
@@ -184,6 +195,10 @@
         }
 
         @media (max-width: 760px) {
+            body {
+                padding: 12px;
+            }
+
             .grid {
                 grid-template-columns: 1fr;
             }
@@ -195,8 +210,12 @@
 
             .hero,
             .panel {
-                padding-left: 22px;
-                padding-right: 22px;
+                padding-left: 18px;
+                padding-right: 18px;
+            }
+
+            h1 {
+                font-size: 24px;
             }
         }
     </style>
@@ -204,84 +223,113 @@
 <body>
 <main class="shell">
     <section class="hero">
-        <div class="eyebrow">Preview Ready</div>
-        <h1>AgentScope Java Demo</h1>
+        <div class="eyebrow">Memory Workspace</div>
+        <h1>AgentScope Java Demo 记忆工作台</h1>
         <p>
-            This page calls the Spring Boot endpoint at <code>POST /api/chat</code>.
-            If the page opens but replies fail, check whether <code>OPENAI_API_KEY</code>
-            and <code>AGENTSCOPE_OPENAI_MODEL_NAME</code> are configured in your IDEA Run Configuration.
+            在同一会话中连续提问，短期记忆、长期记忆与向量知识库会共同组成模型上下文。
+            登录和用户管理由 RuoYi-Cloud-Plus 后端负责，当前页面只发送登录 token。
         </p>
     </section>
 
     <section class="grid">
         <div class="panel">
-            <label for="prompt">Prompt</label>
-            <textarea id="prompt" placeholder="Ask something about AgentScope Java...">Introduce AgentScope Java in one short paragraph.</textarea>
+            <div class="field">
+                <label for="token">RuoYi Token</label>
+                <input id="token" type="password" autocomplete="off" placeholder="粘贴 RuoYi 登录 token">
+            </div>
+            <div class="field">
+                <label for="prompt">消息</label>
+                <textarea id="prompt" placeholder="输入你的问题">请用一段话介绍 AgentScope Java。</textarea>
+            </div>
             <div class="actions">
-                <button id="send" type="button">Send Request</button>
-                <span id="status" class="status">Ready.</span>
+                <button id="send" type="button">发送</button>
+                <span id="status" class="status">就绪</span>
             </div>
         </div>
 
         <div class="panel">
-            <label for="answer">Response</label>
-            <div id="answer" class="answer-box">Your model response will appear here.</div>
+            <label for="answer">回答</label>
+            <div id="answer" class="answer-box">模型回答会显示在这里。</div>
             <div class="tips">
-                SiliconFlow example:
-                <code>OPENAI_BASE_URL=https://api.siliconflow.cn/v1</code>,
-                <code>AGENTSCOPE_OPENAI_MODEL_NAME=Pro/zai-org/GLM-4.7</code>,
-                plus your <code>OPENAI_API_KEY</code>.
-                Put <code>.md</code> or <code>.txt</code> files under <code>data/knowledge</code>
-                to enable local RAG context.
+                短期记忆保存在当前进程；长期记忆在 pgvector 启用后按 RuoYi 用户写入 PostgreSQL；
+                <code>data/knowledge</code> 中的知识可通过 pgvector 召回。
             </div>
-            <div id="runtime" class="runtime">Loading runtime config...</div>
+            <div id="runtime" class="runtime">正在加载运行状态...</div>
         </div>
     </section>
 </main>
 
 <script>
     const promptInput = document.getElementById("prompt");
+    const tokenInput = document.getElementById("token");
     const sendButton = document.getElementById("send");
     const statusText = document.getElementById("status");
     const answerBox = document.getElementById("answer");
     const runtimeBox = document.getElementById("runtime");
+    const conversationStorageKey = "agentscope.conversationId";
+    const tokenStorageKey = "agentscope.ruoyiToken";
+    let tokenHeaderName = "Authorization";
+    let conversationId = sessionStorage.getItem(conversationStorageKey);
+
+    if (!conversationId) {
+        conversationId = typeof crypto.randomUUID === "function"
+            ? crypto.randomUUID()
+            : "conversation-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+        sessionStorage.setItem(conversationStorageKey, conversationId);
+    }
+
+    tokenInput.value = sessionStorage.getItem(tokenStorageKey) || "";
+    tokenInput.addEventListener("input", () => {
+        sessionStorage.setItem(tokenStorageKey, tokenInput.value.trim());
+    });
 
     async function loadRuntimeConfig() {
         try {
             const response = await fetch("/api/config");
             const config = await response.json();
-            runtimeBox.innerHTML =
-                "Runtime config:<br>" +
-                "modelName = <code>" + (config.modelName || "(empty)") + "</code><br>" +
-                "baseUrl = <code>" + (config.baseUrl || "(empty)") + "</code><br>" +
-                "apiKeyConfigured = <code>" + config.apiKeyConfigured + "</code><br>" +
-                "ragEnabled = <code>" + config.ragEnabled + "</code><br>" +
-                "ragKnowledgeDir = <code>" + (config.ragKnowledgeDir || "(empty)") + "</code><br>" +
-                "ragTopK = <code>" + config.ragTopK + "</code>";
+            tokenHeaderName = config.ruoyiTokenName || "Authorization";
+            runtimeBox.textContent = [
+                "聊天模型：" + (config.modelName || "未配置") +
+                    (config.apiKeyConfigured ? " / API Key 已配置" : " / 缺少 API Key"),
+                "Embedding：" + (config.embeddingModel || "未配置") +
+                    (config.embeddingApiKeyConfigured ? " / API Key 已配置" : " / 缺少 API Key"),
+                "pgvector：" + (config.pgVectorConfigured ? "已配置" : "未启用或未配置"),
+                "RuoYi 鉴权：" + (config.ruoyiAuthEnabled ? "已启用" : "未启用") +
+                    " / Header " + tokenHeaderName,
+                "长期记忆 Top-K：" + (config.longTermMemoryTopK || 5),
+                "知识目录：" + (config.ragKnowledgeDir || "data/knowledge"),
+                "当前会话：" + conversationId
+            ].join("\n");
         } catch (error) {
-            runtimeBox.textContent = "Failed to load runtime config: " + error.message;
+            runtimeBox.textContent = "运行状态加载失败：" + error.message;
         }
     }
 
     async function sendPrompt() {
         const message = promptInput.value.trim();
         if (!message) {
-            statusText.textContent = "Please enter a prompt first.";
-            answerBox.textContent = "Request was not sent because the prompt is empty.";
+            statusText.textContent = "请输入消息";
+            answerBox.textContent = "消息为空，尚未发送。";
             return;
         }
 
         sendButton.disabled = true;
-        statusText.textContent = "Calling /api/chat...";
-        answerBox.textContent = "Waiting for response...";
+        statusText.textContent = "正在请求...";
+        answerBox.textContent = "正在等待回答...";
 
         try {
+            const token = tokenInput.value.trim();
+            const headers = { "Content-Type": "application/json" };
+            if (token) {
+                headers[tokenHeaderName] = token.toLowerCase().startsWith("bearer ")
+                    ? token
+                    : "Bearer " + token;
+            }
+
             const response = await fetch("/api/chat", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ message })
+                headers,
+                body: JSON.stringify({ conversationId, message })
             });
 
             const text = await response.text();
@@ -300,11 +348,11 @@
                 throw new Error(messageText);
             }
 
-            answerBox.textContent = payload && payload.answer ? payload.answer : "(No answer returned)";
-            statusText.textContent = "Completed.";
+            answerBox.textContent = payload && payload.answer ? payload.answer : "模型没有返回内容。";
+            statusText.textContent = "已完成";
         } catch (error) {
-            answerBox.textContent = "Request failed: " + error.message;
-            statusText.textContent = "Failed.";
+            answerBox.textContent = "请求失败：" + error.message;
+            statusText.textContent = "失败";
         } finally {
             sendButton.disabled = false;
         }

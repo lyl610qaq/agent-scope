@@ -15,24 +15,24 @@ class PromptContextBuilderTest {
     @Test
     void labelsEachAvailableContextLayer() {
         MemoryContext context = new MemoryContext(
-                List.of(new MemoryTurn("上一问", "上一答", Instant.parse("2026-06-06T10:00:00Z"))),
+                List.of(new MemoryTurn("previous question", "previous answer", Instant.parse("2026-06-06T10:00:00Z"))),
                 List.of(new LongTermMemory(
                         "memory-1",
                         LongTermMemoryCategory.PREFERENCE,
-                        "用户偏好中文回答",
+                        "user prefers concise answers",
                         "conversation-a",
                         0.9,
                         Instant.parse("2026-06-06T10:00:00Z"),
                         Instant.parse("2026-06-06T10:00:00Z"))),
-                List.of(new KnowledgeChunk("guide.md", "项目使用 Java 17")));
+                List.of(new KnowledgeChunk("guide.md", "Project uses Java 17")));
 
-        String prompt = builder.build("You are helpful.", context, "现在用什么版本？");
+        String prompt = builder.build("You are helpful.", context, "Which version?");
 
-        assertTrue(prompt.contains("系统指令"));
-        assertTrue(prompt.contains("短期记忆"));
-        assertTrue(prompt.contains("长期记忆"));
-        assertTrue(prompt.contains("知识库资料"));
-        assertTrue(prompt.endsWith("用户问题：\n现在用什么版本？"));
+        assertTrue(prompt.contains("System instructions"));
+        assertTrue(prompt.contains("Short-term memory"));
+        assertTrue(prompt.contains("Long-term memory"));
+        assertTrue(prompt.contains("Knowledge base"));
+        assertTrue(prompt.endsWith("User question:\nWhich version?"));
     }
 
     @Test
@@ -40,10 +40,10 @@ class PromptContextBuilderTest {
         String prompt = builder.build(
                 "You are helpful.",
                 new MemoryContext(List.of(), List.of(), List.of()),
-                "你好");
+                "hello");
 
-        assertFalse(prompt.contains("短期记忆"));
-        assertFalse(prompt.contains("长期记忆"));
-        assertFalse(prompt.contains("知识库资料"));
+        assertFalse(prompt.contains("Short-term memory"));
+        assertFalse(prompt.contains("Long-term memory"));
+        assertFalse(prompt.contains("Knowledge base"));
     }
 }

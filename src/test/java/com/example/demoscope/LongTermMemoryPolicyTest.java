@@ -13,11 +13,11 @@ class LongTermMemoryPolicyTest {
     void acceptsApprovedLowRiskCategories() {
         assertTrue(policy.isAllowed(new LongTermMemoryCandidate(
                 LongTermMemoryCategory.PREFERENCE,
-                "用户偏好使用中文回答",
+                "user prefers concise answers",
                 0.9)));
         assertTrue(policy.isAllowed(new LongTermMemoryCandidate(
                 LongTermMemoryCategory.PROJECT_CONVENTION,
-                "项目使用 Java 17",
+                "project uses Java 17",
                 0.9)));
     }
 
@@ -41,7 +41,7 @@ class LongTermMemoryPolicyTest {
                 0.9)));
         assertFalse(policy.isAllowed(new LongTermMemoryCandidate(
                 LongTermMemoryCategory.STABLE_FACT,
-                "用户维护该项目",
+                "user maintains this project",
                 0.2)));
     }
 }

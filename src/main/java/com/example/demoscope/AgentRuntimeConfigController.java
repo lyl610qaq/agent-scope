@@ -11,23 +11,41 @@ public class AgentRuntimeConfigController {
     private final String apiKey;
     private final String modelName;
     private final String baseUrl;
-    private final boolean ragEnabled;
+    private final String embeddingApiKey;
+    private final String embeddingModel;
+    private final boolean pgVectorEnabled;
+    private final String pgVectorUrl;
     private final String ragKnowledgeDir;
     private final int ragTopK;
+    private final boolean ruoyiAuthEnabled;
+    private final String ruoyiTokenName;
+    private final int longTermMemoryTopK;
 
     public AgentRuntimeConfigController(
             @Value("${agentscope.openai.api-key:}") String apiKey,
             @Value("${agentscope.openai.model-name:Pro/zai-org/GLM-4.7}") String modelName,
             @Value("${agentscope.openai.base-url:}") String baseUrl,
-            @Value("${agentscope.rag.enabled:true}") boolean ragEnabled,
+            @Value("${agentscope.embedding.api-key:}") String embeddingApiKey,
+            @Value("${agentscope.embedding.model:Qwen/Qwen3-Embedding-4B}") String embeddingModel,
+            @Value("${agentscope.pgvector.enabled:false}") boolean pgVectorEnabled,
+            @Value("${agentscope.pgvector.url:}") String pgVectorUrl,
             @Value("${agentscope.rag.knowledge-dir:data/knowledge}") String ragKnowledgeDir,
-            @Value("${agentscope.rag.top-k:3}") int ragTopK) {
+            @Value("${agentscope.rag.top-k:3}") int ragTopK,
+            @Value("${agentscope.auth.ruoyi.enabled:true}") boolean ruoyiAuthEnabled,
+            @Value("${agentscope.auth.ruoyi.token-name:Authorization}") String ruoyiTokenName,
+            @Value("${agentscope.memory.long-term.top-k:5}") int longTermMemoryTopK) {
         this.apiKey = apiKey;
         this.modelName = modelName;
         this.baseUrl = baseUrl;
-        this.ragEnabled = ragEnabled;
+        this.embeddingApiKey = embeddingApiKey;
+        this.embeddingModel = embeddingModel;
+        this.pgVectorEnabled = pgVectorEnabled;
+        this.pgVectorUrl = pgVectorUrl;
         this.ragKnowledgeDir = ragKnowledgeDir;
         this.ragTopK = ragTopK;
+        this.ruoyiAuthEnabled = ruoyiAuthEnabled;
+        this.ruoyiTokenName = ruoyiTokenName;
+        this.longTermMemoryTopK = longTermMemoryTopK;
     }
 
     @GetMapping("/api/config")
@@ -36,17 +54,29 @@ public class AgentRuntimeConfigController {
                 modelName,
                 baseUrl,
                 StringUtils.hasText(apiKey),
-                ragEnabled,
+                embeddingModel,
+                StringUtils.hasText(embeddingApiKey),
+                pgVectorEnabled,
+                pgVectorEnabled && StringUtils.hasText(pgVectorUrl),
                 ragKnowledgeDir,
-                ragTopK);
+                ragTopK,
+                ruoyiAuthEnabled,
+                ruoyiTokenName,
+                longTermMemoryTopK);
     }
 
     public record AgentRuntimeConfigResponse(
             String modelName,
             String baseUrl,
             boolean apiKeyConfigured,
-            boolean ragEnabled,
+            String embeddingModel,
+            boolean embeddingApiKeyConfigured,
+            boolean pgVectorEnabled,
+            boolean pgVectorConfigured,
             String ragKnowledgeDir,
-            int ragTopK) {
+            int ragTopK,
+            boolean ruoyiAuthEnabled,
+            String ruoyiTokenName,
+            int longTermMemoryTopK) {
     }
 }

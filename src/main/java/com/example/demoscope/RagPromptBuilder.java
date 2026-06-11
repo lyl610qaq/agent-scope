@@ -16,9 +16,9 @@ public class RagPromptBuilder {
         }
 
         StringBuilder prompt = new StringBuilder();
-        prompt.append("请优先依据下面的本地知识库资料回答。")
-                .append("如果资料不足以回答，请明确说明知识库中没有足够信息，再基于通用知识补充。\n\n")
-                .append("本地知识库资料：\n");
+        prompt.append("Answer using the local knowledge base first. ")
+                .append("If the context is insufficient, say so clearly before adding general knowledge.\n\n")
+                .append("Local knowledge base:\n");
 
         for (int i = 0; i < chunks.size(); i++) {
             KnowledgeChunk chunk = chunks.get(i);
@@ -31,7 +31,7 @@ public class RagPromptBuilder {
                     .append("\n\n");
         }
 
-        prompt.append("用户问题：\n").append(userMessage);
+        prompt.append("User question:\n").append(userMessage);
         return prompt.toString();
     }
 }

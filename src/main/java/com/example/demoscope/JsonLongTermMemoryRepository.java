@@ -37,12 +37,12 @@ public class JsonLongTermMemoryRepository implements LongTermMemoryRepository {
     }
 
     @Override
-    public synchronized List<LongTermMemory> findRelevant(String query) {
+    public synchronized List<LongTermMemory> findRelevant(String userId, String query) {
         return List.copyOf(load());
     }
 
     @Override
-    public synchronized void save(String conversationId, LongTermMemoryCandidate candidate) {
+    public synchronized void save(String userId, String conversationId, LongTermMemoryCandidate candidate) {
         if (!policy.isAllowed(candidate)) {
             return;
         }

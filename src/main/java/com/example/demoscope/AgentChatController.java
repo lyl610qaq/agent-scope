@@ -1,5 +1,7 @@
 package com.example.demoscope;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,13 +15,19 @@ import org.springframework.web.server.ResponseStatusException;
 public class AgentChatController {
 
     private final AgentChatService agentChatService;
+    private final AuthenticatedUserContext authenticatedUserContext;
 
-    public AgentChatController(AgentChatService agentChatService) {
+    public AgentChatController(
+            AgentChatService agentChatService,
+            AuthenticatedUserContext authenticatedUserContext) {
         this.agentChatService = agentChatService;
+        this.authenticatedUserContext = authenticatedUserContext;
     }
 
     @PostMapping
-    public ChatResponse chat(@RequestBody ChatRequest request) {
+    public ChatResponse chat(
+            HttpServletRequest servletRequest,
+            @RequestBody ChatRequest request) {
         if (request == null || !StringUtils.hasText(request.message())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "message must not be blank");
         }
@@ -27,8 +35,15 @@ public class AgentChatController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "conversationId must not be blank");
         }
 
+        String userId;
         try {
-            return new ChatResponse(agentChatService.chat(request.conversationId(), request.message()));
+            userId = authenticatedUserContext.requireUserId(servletRequest);
+        } catch (UnauthenticatedUserException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, ex.getMessage(), ex);
+        }
+
+        try {
+            return new ChatResponse(agentChatService.chat(userId, request.conversationId(), request.message()));
         } catch (IllegalStateException ex) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), ex);
         }

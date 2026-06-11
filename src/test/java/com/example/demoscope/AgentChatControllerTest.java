@@ -1,15 +1,22 @@
 package com.example.demoscope;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import jakarta.servlet.http.HttpServletRequest;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -20,6 +27,21 @@ class AgentChatControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private FakeAuthenticatedUserContext authenticatedUserContext;
+
+    @Autowired
+    private CapturingAgentChatService agentChatService;
+
+    @BeforeEach
+    void resetFakes() {
+        authenticatedUserContext.fail = false;
+        agentChatService.fail = false;
+        agentChatService.lastUserId = null;
+        agentChatService.lastConversationId = null;
+        agentChatService.lastMessage = null;
+    }
+
     @Test
     void rootPreviewPageLoads() throws Exception {
         mockMvc.perform(get("/"))
@@ -28,10 +50,12 @@ class AgentChatControllerTest {
     }
 
     @Test
-    void previewHtmlContainsDemoTitle() throws Exception {
+    void previewHtmlContainsDemoTitleAndRuoyiTokenInput() throws Exception {
         mockMvc.perform(get("/index.html"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("AgentScope Java Demo")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("AgentScope Java Demo")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"token\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("RuoYi Token")));
     }
 
     @Test
@@ -61,7 +85,42 @@ class AgentChatControllerTest {
     }
 
     @Test
-    void chatReturnsServerErrorWhenApiKeyMissing() throws Exception {
+    void chatPassesAuthenticatedUserIdToService() throws Exception {
+        mockMvc.perform(post("/api/chat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer valid-token")
+                        .content("""
+                                {
+                                  "conversationId": "conversation-a",
+                                  "message": "Hello"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        assertEquals("user-42", agentChatService.lastUserId);
+        assertEquals("conversation-a", agentChatService.lastConversationId);
+        assertEquals("Hello", agentChatService.lastMessage);
+    }
+
+    @Test
+    void chatRejectsMissingToken() throws Exception {
+        authenticatedUserContext.fail = true;
+
+        mockMvc.perform(post("/api/chat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "conversationId": "conversation-a",
+                                  "message": "Hello"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void chatReturnsServerErrorWhenServiceFails() throws Exception {
+        agentChatService.fail = true;
+
         mockMvc.perform(post("/api/chat")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -71,5 +130,51 @@ class AgentChatControllerTest {
                                 }
                                 """))
                 .andExpect(status().isInternalServerError());
+    }
+
+    @TestConfiguration
+    static class TestConfig {
+
+        @Bean
+        @Primary
+        FakeAuthenticatedUserContext testAuthenticatedUserContext() {
+            return new FakeAuthenticatedUserContext();
+        }
+
+        @Bean
+        @Primary
+        CapturingAgentChatService testAgentChatService() {
+            return new CapturingAgentChatService();
+        }
+    }
+
+    static final class FakeAuthenticatedUserContext implements AuthenticatedUserContext {
+        boolean fail;
+
+        @Override
+        public String requireUserId(HttpServletRequest request) {
+            if (fail) {
+                throw new UnauthenticatedUserException("invalid token");
+            }
+            return "user-42";
+        }
+    }
+
+    static final class CapturingAgentChatService implements AgentChatService {
+        boolean fail;
+        String lastUserId;
+        String lastConversationId;
+        String lastMessage;
+
+        @Override
+        public String chat(String userId, String conversationId, String message) {
+            if (fail) {
+                throw new IllegalStateException("api key missing");
+            }
+            this.lastUserId = userId;
+            this.lastConversationId = conversationId;
+            this.lastMessage = message;
+            return "ok";
+        }
     }
 }

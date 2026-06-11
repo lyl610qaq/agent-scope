@@ -52,9 +52,9 @@ class OpenAiRequestLoggerTest {
                 "sk-1234567890abcdef",
                 "https://api.siliconflow.cn/v1/",
                 "Pro/zai-org/GLM-4.7",
-                "本地知识库资料：\n[1] demo.md\nRAG 已开启");
+                "Local knowledge base:\n[1] demo.md\nRAG enabled");
 
         assertTrue(preview.contains("--url https://api.siliconflow.cn/v1/chat/completions"));
-        assertTrue(preview.contains("本地知识库资料：\\n[1] demo.md\\nRAG 已开启"));
+        assertTrue(preview.contains("Local knowledge base:\\n[1] demo.md\\nRAG enabled"));
     }
 }
