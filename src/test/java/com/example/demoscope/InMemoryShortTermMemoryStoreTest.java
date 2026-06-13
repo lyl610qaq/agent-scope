@@ -15,11 +15,24 @@ class InMemoryShortTermMemoryStoreTest {
         MemoryTurn first = new MemoryTurn("hello", "hi", Instant.parse("2026-06-06T10:00:00Z"));
         MemoryTurn second = new MemoryTurn("status", "ready", Instant.parse("2026-06-06T10:01:00Z"));
 
-        store.append("conversation-a", first);
-        store.append("conversation-b", second);
+        store.append("user-a", "conversation-a", first);
+        store.append("user-a", "conversation-b", second);
 
-        assertEquals(List.of(first), store.recent("conversation-a"));
-        assertEquals(List.of(second), store.recent("conversation-b"));
+        assertEquals(List.of(first), store.recent("user-a", "conversation-a"));
+        assertEquals(List.of(second), store.recent("user-a", "conversation-b"));
+    }
+
+    @Test
+    void isolatesSameConversationIdByUserId() {
+        ShortTermMemoryStore store = new InMemoryShortTermMemoryStore(3);
+        MemoryTurn first = turn("alice");
+        MemoryTurn second = turn("bob");
+
+        store.append("user-a", "shared-conversation", first);
+        store.append("user-b", "shared-conversation", second);
+
+        assertEquals(List.of(first), store.recent("user-a", "shared-conversation"));
+        assertEquals(List.of(second), store.recent("user-b", "shared-conversation"));
     }
 
     @Test
@@ -29,11 +42,11 @@ class InMemoryShortTermMemoryStoreTest {
         MemoryTurn second = turn("two");
         MemoryTurn third = turn("three");
 
-        store.append("conversation", first);
-        store.append("conversation", second);
-        store.append("conversation", third);
+        store.append("user-a", "conversation", first);
+        store.append("user-a", "conversation", second);
+        store.append("user-a", "conversation", third);
 
-        assertEquals(List.of(second, third), store.recent("conversation"));
+        assertEquals(List.of(second, third), store.recent("user-a", "conversation"));
     }
 
     private MemoryTurn turn(String value) {

@@ -49,10 +49,10 @@ public final class RedissonSaTokenDao implements SaTokenDaoByObjectFollowString 
     @Override
     public long getTimeout(String key) {
         long timeoutMillis = bucket(key).remainTimeToLive();
-        if (timeoutMillis <= 0) {
+        if (timeoutMillis < 0) {
             return timeoutMillis;
         }
-        return Math.max(1, TimeUnit.MILLISECONDS.toSeconds(timeoutMillis));
+        return timeoutMillis / 1000 + 1;
     }
 
     @Override

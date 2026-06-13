@@ -34,20 +34,6 @@ public class MemoryConfig {
     }
 
     @Bean
-    @ConditionalOnMissingBean(SaTokenFacade.class)
-    SaTokenFacade saTokenFacade() {
-        return new DefaultSaTokenFacade();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(AuthenticatedUserContext.class)
-    AuthenticatedUserContext authenticatedUserContext(
-            BearerTokenExtractor tokenExtractor,
-            SaTokenFacade saTokenFacade) {
-        return new RuoyiSaTokenUserContext(tokenExtractor, saTokenFacade);
-    }
-
-    @Bean
     ShortTermMemoryStore shortTermMemoryStore(
             @Value("${agentscope.memory.short-term.max-turns:10}") int maxTurns) {
         return new InMemoryShortTermMemoryStore(maxTurns);

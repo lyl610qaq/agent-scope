@@ -92,7 +92,7 @@ class RedissonSaTokenDaoTest {
     void getTimeoutConvertsMillisecondsAndPreservesSentinels() {
         when(bucket.remainTimeToLive()).thenReturn(2_500L, 500L, NEVER_EXPIRE, NOT_VALUE_EXPIRE);
 
-        assertEquals(2, dao.getTimeout("seconds"));
+        assertEquals(3, dao.getTimeout("seconds"));
         assertEquals(1, dao.getTimeout("sub-second"));
         assertEquals(NEVER_EXPIRE, dao.getTimeout("persistent"));
         assertEquals(NOT_VALUE_EXPIRE, dao.getTimeout("missing"));

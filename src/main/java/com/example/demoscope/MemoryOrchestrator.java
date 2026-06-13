@@ -33,7 +33,7 @@ public class MemoryOrchestrator {
     }
 
     public MemoryContext prepare(String userId, String conversationId, String query) {
-        List<MemoryTurn> shortTerm = safelyReadShortTerm(conversationId);
+        List<MemoryTurn> shortTerm = safelyReadShortTerm(userId, conversationId);
         List<LongTermMemory> longTerm = safelyReadLongTerm(userId, query);
         List<KnowledgeChunk> knowledge = safelyRetrieveKnowledge(query);
         return new MemoryContext(shortTerm, longTerm, knowledge);
@@ -46,9 +46,13 @@ public class MemoryOrchestrator {
             String assistantMessage) {
         MemoryTurn turn = new MemoryTurn(userMessage, assistantMessage, clock.instant());
         try {
-            shortTermMemoryStore.append(conversationId, turn);
+            shortTermMemoryStore.append(userId, conversationId, turn);
         } catch (RuntimeException ex) {
-            log.warn("Failed to append short-term memory for conversation {}", conversationId, ex);
+            log.warn(
+                    "Failed to append short-term memory for user {} conversation {}",
+                    userId,
+                    conversationId,
+                    ex);
         }
 
         List<LongTermMemoryCandidate> candidates;
@@ -71,11 +75,15 @@ public class MemoryOrchestrator {
         }
     }
 
-    private List<MemoryTurn> safelyReadShortTerm(String conversationId) {
+    private List<MemoryTurn> safelyReadShortTerm(String userId, String conversationId) {
         try {
-            return shortTermMemoryStore.recent(conversationId);
+            return shortTermMemoryStore.recent(userId, conversationId);
         } catch (RuntimeException ex) {
-            log.warn("Failed to read short-term memory for conversation {}", conversationId, ex);
+            log.warn(
+                    "Failed to read short-term memory for user {} conversation {}",
+                    userId,
+                    conversationId,
+                    ex);
             return List.of();
         }
     }

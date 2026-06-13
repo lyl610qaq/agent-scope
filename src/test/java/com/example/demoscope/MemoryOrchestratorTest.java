@@ -14,9 +14,10 @@ class MemoryOrchestratorTest {
 
     @Test
     void preparesContextUsingAuthenticatedUserId() {
+        CapturingShortTermStore shortTerm = new CapturingShortTermStore();
         CapturingLongTermRepository longTerm = new CapturingLongTermRepository();
         MemoryOrchestrator orchestrator = new MemoryOrchestrator(
-                new FixedShortTermStore(List.of()),
+                shortTerm,
                 longTerm,
                 query -> List.of(),
                 turn -> List.of(),
@@ -25,6 +26,8 @@ class MemoryOrchestratorTest {
 
         orchestrator.prepare("user-42", "conversation-a", "favorite language?");
 
+        assertEquals("user-42", shortTerm.lastUserId);
+        assertEquals("conversation-a", shortTerm.lastConversationId);
         assertEquals("user-42", longTerm.lastUserId);
         assertEquals("favorite language?", longTerm.lastQuery);
     }
@@ -77,6 +80,8 @@ class MemoryOrchestratorTest {
         orchestrator.recordTurn("user-42", "conversation-a", "hello", "hello");
 
         assertEquals(1, shortTerm.turns.size());
+        assertEquals("user-42", shortTerm.lastUserId);
+        assertEquals("conversation-a", shortTerm.lastConversationId);
         assertEquals(1, longTerm.saved.size());
         assertEquals("user-42", longTerm.savedUserId);
         assertEquals("conversation-a", longTerm.savedConversationId);
@@ -95,25 +100,31 @@ class MemoryOrchestratorTest {
         }
 
         @Override
-        public void append(String conversationId, MemoryTurn turn) {
+        public void append(String userId, String conversationId, MemoryTurn turn) {
         }
 
         @Override
-        public List<MemoryTurn> recent(String conversationId) {
+        public List<MemoryTurn> recent(String userId, String conversationId) {
             return turns;
         }
     }
 
     private static final class CapturingShortTermStore implements ShortTermMemoryStore {
         private final List<MemoryTurn> turns = new ArrayList<>();
+        private String lastUserId;
+        private String lastConversationId;
 
         @Override
-        public void append(String conversationId, MemoryTurn turn) {
+        public void append(String userId, String conversationId, MemoryTurn turn) {
+            this.lastUserId = userId;
+            this.lastConversationId = conversationId;
             turns.add(turn);
         }
 
         @Override
-        public List<MemoryTurn> recent(String conversationId) {
+        public List<MemoryTurn> recent(String userId, String conversationId) {
+            this.lastUserId = userId;
+            this.lastConversationId = conversationId;
             return List.copyOf(turns);
         }
     }

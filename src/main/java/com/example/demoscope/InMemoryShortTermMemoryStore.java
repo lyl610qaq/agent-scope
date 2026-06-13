@@ -10,16 +10,16 @@ import java.util.concurrent.ConcurrentMap;
 public class InMemoryShortTermMemoryStore implements ShortTermMemoryStore {
 
     private final int maxTurns;
-    private final ConcurrentMap<String, Deque<MemoryTurn>> turnsByConversation = new ConcurrentHashMap<>();
+    private final ConcurrentMap<ConversationKey, Deque<MemoryTurn>> turnsByConversation = new ConcurrentHashMap<>();
 
     public InMemoryShortTermMemoryStore(int maxTurns) {
         this.maxTurns = Math.max(1, maxTurns);
     }
 
     @Override
-    public void append(String conversationId, MemoryTurn turn) {
+    public void append(String userId, String conversationId, MemoryTurn turn) {
         Deque<MemoryTurn> turns = turnsByConversation.computeIfAbsent(
-                conversationId,
+                new ConversationKey(userId, conversationId),
                 ignored -> new ArrayDeque<>());
         synchronized (turns) {
             turns.addLast(turn);
@@ -30,13 +30,16 @@ public class InMemoryShortTermMemoryStore implements ShortTermMemoryStore {
     }
 
     @Override
-    public List<MemoryTurn> recent(String conversationId) {
-        Deque<MemoryTurn> turns = turnsByConversation.get(conversationId);
+    public List<MemoryTurn> recent(String userId, String conversationId) {
+        Deque<MemoryTurn> turns = turnsByConversation.get(new ConversationKey(userId, conversationId));
         if (turns == null) {
             return List.of();
         }
         synchronized (turns) {
             return List.copyOf(new ArrayList<>(turns));
         }
+    }
+
+    private record ConversationKey(String userId, String conversationId) {
     }
 }
