@@ -76,12 +76,13 @@ public class PostgresLongTermMemoryRepository implements LongTermMemoryRepositor
     }
 
     @Override
-    public List<LongTermMemory> findRelevant(String userId, String query) {
-        String vector = PgVectorKnowledgeStore.serializeVector(embeddingClient.embed(query));
+    public List<LongTermMemory> findRelevant(String userId, SemanticQuery query) {
+        String vector = PgVectorKnowledgeStore.serializeVector(query.embedding());
         if (maxDistance == null) {
             return jdbc.query(
                     """
-                            select id, category, text, source_conversation_id, confidence, created_at, updated_at,
+                            select id, user_id, category, text, source_conversation_id,
+                                   confidence, created_at, updated_at,
                                    embedding <=> ?::vector as distance
                             from long_term_memories
                             where user_id = ? and is_active = true
@@ -95,7 +96,8 @@ public class PostgresLongTermMemoryRepository implements LongTermMemoryRepositor
         }
         return jdbc.query(
                 """
-                        select id, category, text, source_conversation_id, confidence, created_at, updated_at,
+                        select id, user_id, category, text, source_conversation_id,
+                               confidence, created_at, updated_at,
                                embedding <=> ?::vector as distance
                         from long_term_memories
                         where user_id = ? and is_active = true and embedding <=> ?::vector <= ?
@@ -180,6 +182,7 @@ public class PostgresLongTermMemoryRepository implements LongTermMemoryRepositor
     private LongTermMemory mapMemory(ResultSet resultSet, int rowNumber) throws SQLException {
         return new LongTermMemory(
                 resultSet.getString("id"),
+                resultSet.getString("user_id"),
                 LongTermMemoryCategory.valueOf(resultSet.getString("category")),
                 resultSet.getString("text"),
                 resultSet.getString("source_conversation_id"),

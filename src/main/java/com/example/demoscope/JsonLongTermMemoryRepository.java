@@ -37,8 +37,10 @@ public class JsonLongTermMemoryRepository implements LongTermMemoryRepository {
     }
 
     @Override
-    public synchronized List<LongTermMemory> findRelevant(String userId, String query) {
-        return List.copyOf(load());
+    public synchronized List<LongTermMemory> findRelevant(String userId, SemanticQuery query) {
+        return load().stream()
+                .filter(memory -> userId.equals(memory.userId()))
+                .toList();
     }
 
     @Override
@@ -50,12 +52,13 @@ public class JsonLongTermMemoryRepository implements LongTermMemoryRepository {
         List<LongTermMemory> memories = new ArrayList<>(load());
         String normalizedText = normalize(candidate.text());
         Instant now = clock.instant();
-        int existingIndex = findExisting(memories, candidate.category(), normalizedText);
+        int existingIndex = findExisting(memories, userId, candidate.category(), normalizedText);
 
         if (existingIndex >= 0) {
             LongTermMemory existing = memories.get(existingIndex);
             memories.set(existingIndex, new LongTermMemory(
                     existing.id(),
+                    userId,
                     existing.category(),
                     normalizedText,
                     conversationId,
@@ -65,6 +68,7 @@ public class JsonLongTermMemoryRepository implements LongTermMemoryRepository {
         } else {
             memories.add(new LongTermMemory(
                     UUID.randomUUID().toString(),
+                    userId,
                     candidate.category(),
                     normalizedText,
                     conversationId,
@@ -78,11 +82,13 @@ public class JsonLongTermMemoryRepository implements LongTermMemoryRepository {
 
     private int findExisting(
             List<LongTermMemory> memories,
+            String userId,
             LongTermMemoryCategory category,
             String normalizedText) {
         for (int i = 0; i < memories.size(); i++) {
             LongTermMemory memory = memories.get(i);
-            if (memory.category() == category
+            if (userId.equals(memory.userId())
+                    && memory.category() == category
                     && normalize(memory.text()).toLowerCase(Locale.ROOT)
                             .equals(normalizedText.toLowerCase(Locale.ROOT))) {
                 return i;

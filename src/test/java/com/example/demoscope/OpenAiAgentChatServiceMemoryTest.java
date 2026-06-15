@@ -1,8 +1,11 @@
 package com.example.demoscope;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,5 +43,30 @@ class OpenAiAgentChatServiceMemoryTest {
         assertEquals("You are a helpful AI assistant.", systemPrompt.get());
         assertTrue(userPrompt.get().contains("AgentScope knowledge"));
         verify(orchestrator).recordTurn("user-42", "conversation-a", "question", "answer");
+    }
+
+    @Test
+    void doesNotRecordTurnWhenModelGenerationFails() {
+        MemoryOrchestrator orchestrator = mock(MemoryOrchestrator.class);
+        when(orchestrator.prepare("user-42", "conversation-a", "question"))
+                .thenReturn(new MemoryContext(List.of(), List.of(), List.of()));
+        ChatTextModel model = (system, user) -> {
+            throw new IllegalStateException("model unavailable");
+        };
+        OpenAiAgentChatService service = new OpenAiAgentChatService(
+                model,
+                orchestrator,
+                new PromptContextBuilder(),
+                "You are a helpful AI assistant.");
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> service.chat("user-42", "conversation-a", "question"));
+
+        verify(orchestrator, never()).recordTurn(
+                anyString(),
+                anyString(),
+                anyString(),
+                anyString());
     }
 }

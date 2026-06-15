@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -19,7 +20,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 @Configuration(proxyBeanMethods = false)
-public class MemoryConfig {
+public class AgentMemoryConfig {
 
     @Bean
     Clock memoryClock() {
@@ -82,10 +83,24 @@ public class MemoryConfig {
         return new SiliconFlowEmbeddingClient(baseUrl, apiKey, model, dimensions);
     }
 
+    @Bean("knowledgeRetrievalSettings")
+    RetrievalSettings knowledgeRetrievalSettings(
+            @Value("${agentscope.retrieval.knowledge.vector-top-k:30}") int vectorTopK,
+            @Value("${agentscope.retrieval.knowledge.final-top-n:6}") int finalTopN,
+            @Value("${agentscope.retrieval.knowledge.min-score:0.70}") double minScore) {
+        return new RetrievalSettings(vectorTopK, finalTopN, minScore);
+    }
+
+    @Bean("longTermMemoryRetrievalSettings")
+    RetrievalSettings longTermMemoryRetrievalSettings(
+            @Value("${agentscope.retrieval.long-term-memory.vector-top-k:20}") int vectorTopK,
+            @Value("${agentscope.retrieval.long-term-memory.final-top-n:5}") int finalTopN,
+            @Value("${agentscope.retrieval.long-term-memory.min-score:0.72}") double minScore) {
+        return new RetrievalSettings(vectorTopK, finalTopN, minScore);
+    }
+
     @Bean
-    @ConditionalOnProperty(
-            name = "agentscope.pgvector.enabled",
-            havingValue = "true")
+    @ConditionalOnProperty(name = "agentscope.pgvector.enabled", havingValue = "true")
     @ConditionalOnMissingBean(JdbcOperations.class)
     JdbcOperations pgVectorJdbcOperations(
             @Value("${agentscope.pgvector.url:}") String url,
@@ -95,47 +110,27 @@ public class MemoryConfig {
     }
 
     @Bean
-    @ConditionalOnProperty(
-            name = "agentscope.pgvector.enabled",
-            havingValue = "true")
-    PgVectorKnowledgeStore pgVectorKnowledgeStore(
-            JdbcOperations pgVectorJdbcOperations,
-            EmbeddingClient embeddingClient,
-            @Value("${agentscope.rag.top-k:3}") int topK,
-            @Value("${agentscope.embedding.dimensions:1024}") int embeddingDimensions,
-            @Value("${agentscope.rag.max-distance:}") String maxDistance) {
-        Double distance = maxDistance.isBlank() ? null : Double.valueOf(maxDistance);
-        PgVectorKnowledgeStore store = new PgVectorKnowledgeStore(
-                pgVectorJdbcOperations,
-                embeddingClient,
-                topK,
-                embeddingDimensions,
-                distance);
+    @ConditionalOnProperty(name = "agentscope.pgvector.enabled", havingValue = "true")
+    KnowledgeRetriever pgVectorKnowledgeRetriever(
+            JdbcOperations jdbc,
+            @Qualifier("knowledgeRetrievalSettings") RetrievalSettings settings) {
+        PgVectorKnowledgeStore store = new PgVectorKnowledgeStore(jdbc, settings);
         store.initializeSchema();
         return store;
     }
 
     @Bean
-    @ConditionalOnProperty(
-            name = "agentscope.pgvector.enabled",
-            havingValue = "true")
-    LongTermMemoryRepository postgresLongTermMemoryRepository(
-            JdbcOperations pgVectorJdbcOperations,
+    @ConditionalOnProperty(name = "agentscope.pgvector.enabled", havingValue = "true")
+    LongTermMemoryRepository pgVectorLongTermMemoryRepository(
+            JdbcOperations jdbc,
             EmbeddingClient embeddingClient,
-            LongTermMemoryPolicy policy,
-            Clock clock,
-            @Value("${agentscope.memory.long-term.top-k:5}") int topK,
-            @Value("${agentscope.embedding.dimensions:1024}") int embeddingDimensions,
-            @Value("${agentscope.memory.long-term.max-distance:}") String maxDistance) {
-        Double distance = maxDistance.isBlank() ? null : Double.valueOf(maxDistance);
-        PostgresLongTermMemoryRepository repository = new PostgresLongTermMemoryRepository(
-                pgVectorJdbcOperations,
+            @Qualifier("longTermMemoryRetrievalSettings") RetrievalSettings settings,
+            Clock clock) {
+        PgVectorLongTermMemoryRepository repository = new PgVectorLongTermMemoryRepository(
+                jdbc,
                 embeddingClient,
-                policy,
-                clock,
-                topK,
-                embeddingDimensions,
-                distance);
+                settings,
+                clock);
         repository.initializeSchema();
         return repository;
     }
@@ -165,6 +160,7 @@ public class MemoryConfig {
             KnowledgeRetriever knowledgeRetriever,
             LongTermMemoryExtractor longTermMemoryExtractor,
             LongTermMemoryPolicy longTermMemoryPolicy,
+            EmbeddingClient embeddingClient,
             Clock clock) {
         return new MemoryOrchestrator(
                 shortTermMemoryStore,
@@ -172,6 +168,7 @@ public class MemoryConfig {
                 knowledgeRetriever,
                 longTermMemoryExtractor,
                 longTermMemoryPolicy,
+                embeddingClient,
                 clock);
     }
 

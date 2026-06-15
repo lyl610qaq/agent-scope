@@ -104,7 +104,9 @@ class PostgresLongTermMemoryRepositoryTest {
         when(jdbc.query(anyString(), any(RowMapper.class), any(), any(), any())).thenReturn(List.of(memory()));
         PostgresLongTermMemoryRepository repository = repository(jdbc, input -> new float[] {0.4f, 0.5f});
 
-        List<LongTermMemory> memories = repository.findRelevant("user-a", "favorite language?");
+        List<LongTermMemory> memories = repository.findRelevant(
+                "user-a",
+                new SemanticQuery("favorite language?", new float[] {0.4f, 0.5f}));
 
         assertEquals(1, memories.size());
         assertEquals("user prefers concise answers", memories.get(0).text());
@@ -119,6 +121,7 @@ class PostgresLongTermMemoryRepositoryTest {
     private LongTermMemory memory() {
         return new LongTermMemory(
                 "00000000-0000-0000-0000-000000000002",
+                "user-a",
                 LongTermMemoryCategory.PREFERENCE,
                 "user prefers concise answers",
                 "conversation-a",

@@ -15,6 +15,7 @@ public class MemoryOrchestrator {
     private final KnowledgeRetriever knowledgeRetriever;
     private final LongTermMemoryExtractor longTermMemoryExtractor;
     private final LongTermMemoryPolicy longTermMemoryPolicy;
+    private final EmbeddingClient embeddingClient;
     private final Clock clock;
 
     public MemoryOrchestrator(
@@ -23,19 +24,29 @@ public class MemoryOrchestrator {
             KnowledgeRetriever knowledgeRetriever,
             LongTermMemoryExtractor longTermMemoryExtractor,
             LongTermMemoryPolicy longTermMemoryPolicy,
+            EmbeddingClient embeddingClient,
             Clock clock) {
         this.shortTermMemoryStore = shortTermMemoryStore;
         this.longTermMemoryRepository = longTermMemoryRepository;
         this.knowledgeRetriever = knowledgeRetriever;
         this.longTermMemoryExtractor = longTermMemoryExtractor;
         this.longTermMemoryPolicy = longTermMemoryPolicy;
+        this.embeddingClient = embeddingClient;
         this.clock = clock;
     }
 
     public MemoryContext prepare(String userId, String conversationId, String query) {
         List<MemoryTurn> shortTerm = safelyReadShortTerm(userId, conversationId);
-        List<LongTermMemory> longTerm = safelyReadLongTerm(userId, query);
-        List<KnowledgeChunk> knowledge = safelyRetrieveKnowledge(query);
+        SemanticQuery semanticQuery;
+        try {
+            semanticQuery = new SemanticQuery(query, embeddingClient.embed(query));
+        } catch (RuntimeException ex) {
+            log.warn("Failed to embed retrieval query", ex);
+            return new MemoryContext(shortTerm, List.of(), List.of());
+        }
+
+        List<LongTermMemory> longTerm = safelyReadLongTerm(userId, semanticQuery);
+        List<KnowledgeChunk> knowledge = safelyRetrieveKnowledge(semanticQuery);
         return new MemoryContext(shortTerm, longTerm, knowledge);
     }
 
@@ -88,7 +99,7 @@ public class MemoryOrchestrator {
         }
     }
 
-    private List<LongTermMemory> safelyReadLongTerm(String userId, String query) {
+    private List<LongTermMemory> safelyReadLongTerm(String userId, SemanticQuery query) {
         try {
             return longTermMemoryRepository.findRelevant(userId, query);
         } catch (RuntimeException ex) {
@@ -97,7 +108,7 @@ public class MemoryOrchestrator {
         }
     }
 
-    private List<KnowledgeChunk> safelyRetrieveKnowledge(String query) {
+    private List<KnowledgeChunk> safelyRetrieveKnowledge(SemanticQuery query) {
         try {
             return knowledgeRetriever.retrieve(query);
         } catch (RuntimeException ex) {

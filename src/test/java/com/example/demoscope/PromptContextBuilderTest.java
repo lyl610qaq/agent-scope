@@ -18,6 +18,7 @@ class PromptContextBuilderTest {
                 List.of(new MemoryTurn("previous question", "previous answer", Instant.parse("2026-06-06T10:00:00Z"))),
                 List.of(new LongTermMemory(
                         "memory-1",
+                        "user-42",
                         LongTermMemoryCategory.PREFERENCE,
                         "user prefers concise answers",
                         "conversation-a",

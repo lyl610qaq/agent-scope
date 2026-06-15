@@ -5,5 +5,5 @@ import java.util.List;
 @FunctionalInterface
 public interface KnowledgeRetriever {
 
-    List<KnowledgeChunk> retrieve(String query);
+    List<KnowledgeChunk> retrieve(SemanticQuery query);
 }

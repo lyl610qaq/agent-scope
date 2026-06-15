@@ -21,7 +21,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest(properties = "agentscope.openai.api-key=")
+@SpringBootTest(properties = {
+        "agentscope.openai.api-key=",
+        "agentscope.auth.ruoyi.base-url=http://127.0.0.1:18081"
+})
 @AutoConfigureMockMvc
 @Import(TestRedissonConfig.class)
 class AgentChatControllerTest {
@@ -57,7 +60,11 @@ class AgentChatControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("AgentScope Java Demo")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"token\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("RuoYi Token")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("RuoYi Token")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("config.embeddingModel"))))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("config.ruoyiAuth")));
     }
 
     @Test

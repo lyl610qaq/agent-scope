@@ -1,5 +1,6 @@
 package com.example.demoscope;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Clock;
@@ -7,6 +8,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +25,7 @@ class MemoryOrchestratorTest {
                 query -> List.of(),
                 turn -> List.of(),
                 new LongTermMemoryPolicy(),
+                input -> new float[] {0.1f},
                 fixedClock());
 
         orchestrator.prepare("user-42", "conversation-a", "favorite language?");
@@ -29,7 +33,7 @@ class MemoryOrchestratorTest {
         assertEquals("user-42", shortTerm.lastUserId);
         assertEquals("conversation-a", shortTerm.lastConversationId);
         assertEquals("user-42", longTerm.lastUserId);
-        assertEquals("favorite language?", longTerm.lastQuery);
+        assertEquals("favorite language?", longTerm.lastQuery.text());
     }
 
     @Test
@@ -47,6 +51,7 @@ class MemoryOrchestratorTest {
                 knowledge,
                 ignored -> List.of(),
                 new LongTermMemoryPolicy(),
+                input -> new float[] {0.1f},
                 fixedClock());
 
         MemoryContext context = orchestrator.prepare("user-42", "conversation-a", "question");
@@ -75,6 +80,7 @@ class MemoryOrchestratorTest {
                 query -> List.of(),
                 extractor,
                 new LongTermMemoryPolicy(),
+                input -> new float[] {0.1f},
                 fixedClock());
 
         orchestrator.recordTurn("user-42", "conversation-a", "hello", "hello");
@@ -86,6 +92,60 @@ class MemoryOrchestratorTest {
         assertEquals("user-42", longTerm.savedUserId);
         assertEquals("conversation-a", longTerm.savedConversationId);
         assertEquals("user prefers concise answers", longTerm.saved.get(0).text());
+    }
+
+    @Test
+    void createsOneEmbeddingForBothSemanticSources() {
+        AtomicInteger embeddingCalls = new AtomicInteger();
+        AtomicReference<SemanticQuery> knowledgeQuery = new AtomicReference<>();
+        CapturingLongTermRepository longTerm = new CapturingLongTermRepository();
+        EmbeddingClient embeddingClient = input -> {
+            embeddingCalls.incrementAndGet();
+            return new float[] {0.2f, 0.8f};
+        };
+        KnowledgeRetriever knowledge = query -> {
+            knowledgeQuery.set(query);
+            return List.of();
+        };
+        MemoryOrchestrator orchestrator = new MemoryOrchestrator(
+                new CapturingShortTermStore(),
+                longTerm,
+                knowledge,
+                turn -> List.of(),
+                new LongTermMemoryPolicy(),
+                embeddingClient,
+                fixedClock());
+
+        orchestrator.prepare("user-42", "conversation-a", "question");
+
+        assertEquals(1, embeddingCalls.get());
+        assertArrayEquals(
+                knowledgeQuery.get().embedding(),
+                longTerm.lastQuery.embedding());
+    }
+
+    @Test
+    void keepsShortTermMemoryWhenEmbeddingFails() {
+        MemoryTurn turn = new MemoryTurn("old", "answer", Instant.parse("2026-06-06T10:00:00Z"));
+        MemoryOrchestrator orchestrator = new MemoryOrchestrator(
+                new FixedShortTermStore(List.of(turn)),
+                new CapturingLongTermRepository(),
+                query -> List.of(new KnowledgeChunk("guide.md", "content")),
+                ignored -> List.of(),
+                new LongTermMemoryPolicy(),
+                input -> {
+                    throw new IllegalStateException("embedding unavailable");
+                },
+                fixedClock());
+
+        MemoryContext context = orchestrator.prepare(
+                "user-42",
+                "conversation-a",
+                "question");
+
+        assertEquals(List.of(turn), context.shortTermTurns());
+        assertEquals(List.of(), context.longTermMemories());
+        assertEquals(List.of(), context.knowledgeChunks());
     }
 
     private Clock fixedClock() {
@@ -131,7 +191,7 @@ class MemoryOrchestratorTest {
 
     private static final class FailingLongTermRepository implements LongTermMemoryRepository {
         @Override
-        public List<LongTermMemory> findRelevant(String userId, String query) {
+        public List<LongTermMemory> findRelevant(String userId, SemanticQuery query) {
             throw new IllegalStateException("file unavailable");
         }
 
@@ -143,12 +203,12 @@ class MemoryOrchestratorTest {
     private static final class CapturingLongTermRepository implements LongTermMemoryRepository {
         private final List<LongTermMemoryCandidate> saved = new ArrayList<>();
         private String lastUserId;
-        private String lastQuery;
+        private SemanticQuery lastQuery;
         private String savedUserId;
         private String savedConversationId;
 
         @Override
-        public List<LongTermMemory> findRelevant(String userId, String query) {
+        public List<LongTermMemory> findRelevant(String userId, SemanticQuery query) {
             this.lastUserId = userId;
             this.lastQuery = query;
             return List.of();

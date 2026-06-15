@@ -287,17 +287,19 @@
         try {
             const response = await fetch("/api/config");
             const config = await response.json();
-            tokenHeaderName = config.ruoyiTokenName || "Authorization";
+            const auth = config.ruoyiAuth || {};
+            const knowledge = config.knowledge || {};
+            const longTermMemory = config.longTermMemory || {};
+            tokenHeaderName = auth.tokenHeaderName || "Authorization";
             runtimeBox.textContent = [
                 "聊天模型：" + (config.modelName || "未配置") +
                     (config.apiKeyConfigured ? " / API Key 已配置" : " / 缺少 API Key"),
-                "Embedding：" + (config.embeddingModel || "未配置") +
-                    (config.embeddingApiKeyConfigured ? " / API Key 已配置" : " / 缺少 API Key"),
-                "pgvector：" + (config.pgVectorConfigured ? "已配置" : "未启用或未配置"),
-                "RuoYi 鉴权：" + (config.ruoyiAuthEnabled ? "已启用" : "未启用") +
-                    " / Header " + tokenHeaderName,
-                "长期记忆 Top-K：" + (config.longTermMemoryTopK || 5),
-                "知识目录：" + (config.ragKnowledgeDir || "data/knowledge"),
+                "RuoYi 登录接口：" + (auth.loginPath || "/api/auth/login"),
+                "RuoYi 鉴权 Header：" + tokenHeaderName,
+                "知识召回：" + (knowledge.vectorTopK || 0) +
+                    " → " + (knowledge.finalTopN || 0),
+                "长期记忆召回：" + (longTermMemory.vectorTopK || 0) +
+                    " → " + (longTermMemory.finalTopN || 0),
                 "当前会话：" + conversationId
             ].join("\n");
         } catch (error) {

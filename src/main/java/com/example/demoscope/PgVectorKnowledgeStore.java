@@ -1,55 +1,50 @@
 package com.example.demoscope;
 
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.jdbc.core.JdbcOperations;
 
 public class PgVectorKnowledgeStore implements KnowledgeRetriever {
 
-    private static final String SELECT_COLUMNS = """
-            select source, content, embedding <=> ?::vector as distance
+    private static final int EMBEDDING_DIMENSIONS = 1024;
+    private static final String SEARCH_SQL = """
+            select source,
+                   content,
+                   1 - (embedding <=> ?::vector) as similarity
             from knowledge_chunks
+            order by embedding <=> ?::vector
+            limit ?
             """;
-    private final JdbcOperations jdbc;
-    private final EmbeddingClient embeddingClient;
-    private final int topK;
-    private final int embeddingDimensions;
-    private final Double maxDistance;
 
-    public PgVectorKnowledgeStore(
-            JdbcOperations jdbc,
-            EmbeddingClient embeddingClient,
-            int topK,
-            int embeddingDimensions,
-            Double maxDistance) {
+    private final JdbcOperations jdbc;
+    private final RetrievalSettings settings;
+
+    public PgVectorKnowledgeStore(JdbcOperations jdbc, RetrievalSettings settings) {
         this.jdbc = jdbc;
-        this.embeddingClient = embeddingClient;
-        this.topK = topK;
-        this.embeddingDimensions = embeddingDimensions;
-        this.maxDistance = maxDistance;
+        this.settings = settings;
     }
 
     @Override
-    public List<KnowledgeChunk> retrieve(String query) {
-        String vector = serializeVector(embeddingClient.embed(query));
-        if (maxDistance == null) {
-            return jdbc.query(
-                    SELECT_COLUMNS + "order by distance limit ?",
-                    (resultSet, rowNumber) -> new KnowledgeChunk(
-                            resultSet.getString("source"),
-                            resultSet.getString("content")),
-                    vector,
-                    topK);
-        }
-        return jdbc.query(
-                SELECT_COLUMNS + "where embedding <=> ?::vector <= ? order by distance limit ?",
-                (resultSet, rowNumber) -> new KnowledgeChunk(
-                        resultSet.getString("source"),
-                        resultSet.getString("content")),
+    public List<KnowledgeChunk> retrieve(SemanticQuery query) {
+        String vector = serializeVector(query.embedding());
+        List<ScoredKnowledgeChunk> candidates = jdbc.query(
+                SEARCH_SQL,
+                (resultSet, rowNumber) -> new ScoredKnowledgeChunk(
+                        new KnowledgeChunk(
+                                resultSet.getString("source"),
+                                resultSet.getString("content")),
+                        resultSet.getDouble("similarity")),
                 vector,
                 vector,
-                maxDistance,
-                topK);
+                settings.vectorTopK());
+
+        return candidates.stream()
+                .filter(candidate -> candidate.similarity() >= settings.minScore())
+                .sorted(Comparator.comparingDouble(ScoredKnowledgeChunk::similarity).reversed())
+                .limit(settings.finalTopN())
+                .map(ScoredKnowledgeChunk::chunk)
+                .toList();
     }
 
     public void initializeSchema() {
@@ -69,7 +64,7 @@ public class PgVectorKnowledgeStore implements KnowledgeRetriever {
                     updated_at timestamptz not null default now(),
                     unique (source, chunk_index)
                 )
-                """.formatted(embeddingDimensions);
+                """.formatted(EMBEDDING_DIMENSIONS);
     }
 
     static String serializeVector(float[] vector) {
@@ -81,5 +76,8 @@ public class PgVectorKnowledgeStore implements KnowledgeRetriever {
             serialized.append(vector[index]);
         }
         return serialized.append(']').toString();
+    }
+
+    private record ScoredKnowledgeChunk(KnowledgeChunk chunk, double similarity) {
     }
 }
