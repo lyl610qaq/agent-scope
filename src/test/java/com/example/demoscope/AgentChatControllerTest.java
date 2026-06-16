@@ -23,7 +23,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest(properties = {
         "agentscope.openai.api-key=",
-        "agentscope.auth.ruoyi.base-url=http://127.0.0.1:18081"
+        "agentscope.auth.ruoyi.base-url=http://127.0.0.1:18081",
+        "agentscope.interview.enabled=false"
 })
 @AutoConfigureMockMvc
 @Import(TestRedissonConfig.class)

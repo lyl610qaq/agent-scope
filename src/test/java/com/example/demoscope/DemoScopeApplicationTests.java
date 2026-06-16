@@ -13,7 +13,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @SpringBootTest(properties = {
         "agentscope.openai.api-key=test-key",
         "agentscope.embedding.api-key=test-embedding-key",
-        "agentscope.auth.ruoyi.base-url=http://127.0.0.1:18081"
+        "agentscope.auth.ruoyi.base-url=http://127.0.0.1:18081",
+        "agentscope.interview.enabled=false"
 })
 @Import(TestRedissonConfig.class)
 class DemoScopeApplicationTests {

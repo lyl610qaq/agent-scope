@@ -9,7 +9,8 @@ import org.springframework.context.annotation.Import;
 
 @SpringBootTest(properties = {
         "AGENTSCOPE_OPENAI_MODEL_NAME=Pro/zai-org/GLM-4.7",
-        "agentscope.auth.ruoyi.base-url=http://127.0.0.1:18081"
+        "agentscope.auth.ruoyi.base-url=http://127.0.0.1:18081",
+        "agentscope.interview.enabled=false"
 })
 @Import(TestRedissonConfig.class)
 class OpenAiModelConfigTest {

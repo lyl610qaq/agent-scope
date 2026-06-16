@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
         "agentscope.openai.base-url=https://api.siliconflow.cn/v1",
         "agentscope.auth.ruoyi.base-url=http://127.0.0.1:18081",
         "agentscope.auth.ruoyi.token-name=X-RuoYi-Token",
+        "agentscope.interview.enabled=false",
         "agentscope.embedding.api-key=embedding-key",
         "agentscope.embedding.model=Qwen/Qwen3-Embedding-4B",
         "agentscope.pgvector.enabled=true",
