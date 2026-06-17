@@ -1,6 +1,8 @@
 package com.example.demoscope;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,5 +31,29 @@ public class InterviewEvidenceProvider {
             log.warn("Interview evidence retrieval failed");
             return List.of();
         }
+    }
+
+    public List<KnowledgeChunk> retrieve(
+            RagQueryPlan plan,
+            int maxEvidence) {
+        if (maxEvidence <= 0) {
+            return List.of();
+        }
+        Map<String, KnowledgeChunk> chunksBySource = new LinkedHashMap<>();
+        for (RagQueryPlan.Query query : plan.queries()) {
+            try {
+                float[] embedding = embeddingClient.embed(query.query());
+                for (KnowledgeChunk chunk : knowledgeRetriever.retrieve(
+                        new SemanticQuery(query.query(), embedding))) {
+                    chunksBySource.putIfAbsent(chunk.source(), chunk);
+                    if (chunksBySource.size() >= maxEvidence) {
+                        return List.copyOf(chunksBySource.values());
+                    }
+                }
+            } catch (RuntimeException exception) {
+                log.warn("Interview planned evidence retrieval failed");
+            }
+        }
+        return List.copyOf(chunksBySource.values());
     }
 }

@@ -39,6 +39,29 @@ class InterviewConfigTest {
                             InterviewAnswerEvaluator.class);
                     assertThat(context).hasSingleBean(
                             InterviewReportGenerator.class);
+                    assertThat(context).hasSingleBean(
+                            InterviewAgentOrchestrator.class);
+                    assertThat(context).hasSingleBean(InterviewRouterAgent.class);
+                    assertThat(context).hasSingleBean(
+                            InterviewRagPlannerAgent.class);
+                    assertThat(context).hasSingleBean(
+                            InterviewMemoryManagerAgent.class);
+                    assertThat(context).hasSingleBean(
+                            InterviewMemoryContextProvider.class);
+                    assertThat(context).hasSingleBean(InterviewMemoryWriter.class);
+                    assertThat(context).hasBean("interviewerAgent");
+                    assertThat(context).hasBean("projectAgent");
+                    assertThat(context).hasBean("javaSkillAgent");
+                    assertThat(context).hasBean("scoreAgent");
+                    assertThat(context.getBean(InterviewQuestionGenerator.class))
+                            .isInstanceOf(
+                                    AgenticInterviewQuestionGenerator.class);
+                    assertThat(context.getBean(InterviewAnswerEvaluator.class))
+                            .isInstanceOf(
+                                    AgenticInterviewAnswerEvaluator.class);
+                    assertThat(context.getBean(InterviewReportGenerator.class))
+                            .isInstanceOf(
+                                    AgenticInterviewReportGenerator.class);
                     assertThat(context).hasSingleBean(InterviewService.class);
                     assertThat(context).hasSingleBean(InterviewController.class);
                     assertThat(context).hasSingleBean(ChatTextModel.class);
@@ -65,6 +88,14 @@ class InterviewConfigTest {
                             .doesNotHaveBean(InterviewAnswerEvaluator.class);
                     assertThat(context)
                             .doesNotHaveBean(InterviewReportGenerator.class);
+                    assertThat(context)
+                            .doesNotHaveBean(InterviewAgentOrchestrator.class);
+                    assertThat(context)
+                            .doesNotHaveBean(InterviewRouterAgent.class);
+                    assertThat(context)
+                            .doesNotHaveBean(InterviewRagPlannerAgent.class);
+                    assertThat(context)
+                            .doesNotHaveBean(InterviewMemoryManagerAgent.class);
                     assertThat(context)
                             .doesNotHaveBean(InterviewService.class);
                     assertThat(context)
@@ -108,6 +139,21 @@ class InterviewConfigTest {
         @Bean
         AuthenticatedUserContext authenticatedUserContext() {
             return mock(AuthenticatedUserContext.class);
+        }
+
+        @Bean
+        ShortTermMemoryStore shortTermMemoryStore() {
+            return mock(ShortTermMemoryStore.class);
+        }
+
+        @Bean
+        LongTermMemoryRepository longTermMemoryRepository() {
+            return mock(LongTermMemoryRepository.class);
+        }
+
+        @Bean
+        LongTermMemoryPolicy longTermMemoryPolicy() {
+            return new LongTermMemoryPolicy();
         }
 
         @Bean
