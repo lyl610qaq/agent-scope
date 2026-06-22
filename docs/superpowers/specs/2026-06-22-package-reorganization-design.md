@@ -7,11 +7,16 @@ Date: 2026-06-22
 Reorganize the current flat `com.example.demoscope` Java package into
 feature-oriented modules with light internal layering. The change should make
 the code easier to navigate by business capability while preserving the
-existing runtime behavior, API contracts, Spring bean wiring, and tests.
+interview, chat, memory, knowledge, Spring bean wiring, and test behavior.
 
-This design also confirms that authentication continues to use the local
-RuoYi-Cloud-Plus login service through HTTP proxying and shared Sa-Token state
-rather than copying RuoYi login source code into this application.
+One intentional behavior change is included: `agent-scope` should no longer
+expose its own authentication endpoints. Clients log in through RuoYi directly
+and pass the RuoYi token to `agent-scope` business APIs.
+
+This design also confirms that login remains a RuoYi-Cloud-Plus responsibility.
+Clients log in through RuoYi directly, then call this application with the
+RuoYi token. This application only resolves a trusted `userId` from that token
+through RuoYi/Sa-Token login state.
 
 ## Current State
 
@@ -23,7 +28,7 @@ src/main/java/com/example/demoscope
 
 The package contains several distinct responsibilities:
 
-- RuoYi authentication proxy and Sa-Token user lookup.
+- RuoYi token parsing and Sa-Token user lookup.
 - Generic agent chat APIs and model-backed chat service.
 - Authenticated Java interview APIs, state machine, persistence, and AI
   adapters.
@@ -72,8 +77,7 @@ com.example.demoscope
 |   |-- api
 |   |-- application
 |   `-- infrastructure
-|-- auth
-|   |-- api
+|-- identity
 |   |-- application
 |   |-- domain
 |   |-- infrastructure
@@ -118,77 +122,71 @@ agent.infrastructure
 - AgentScopeChatTextModel
 ```
 
-The generic chat module may depend on `auth`, `memory`, `knowledge`, and `llm`.
-It should not depend on interview-specific state-machine classes.
+The generic chat module may depend on `identity`, `memory`, `knowledge`, and
+`llm`. It should not depend on interview-specific state-machine classes.
 
-### auth
+### identity
 
-Authentication integration with RuoYi-Cloud-Plus and Sa-Token.
+Identity integration with RuoYi-Cloud-Plus and Sa-Token.
 
 ```text
-auth.api
-- RuoyiAuthProxyController
-
-auth.application
+identity.application
 - AuthenticatedUserContext
 - BearerTokenExtractor
 - RuoyiSaTokenUserContext
 
-auth.domain
+identity.domain
 - SaTokenFacade
 - UnauthenticatedUserException
-- RuoyiAuthProxyException
-- RuoyiAuthProxyResponse
-- RuoyiAuthProxySettings
 
-auth.infrastructure
-- RuoyiAuthProxyClient
+identity.infrastructure
 - DefaultSaTokenFacade
 - RedissonSaTokenDao
 
-auth.config
+identity.config
 - RuoyiAuthConfig
-- RuoyiAuthProxyConfig
 ```
 
-Authentication remains an adapter around RuoYi, not a local replacement for
-RuoYi login.
+The identity module does not expose `/api/auth/*` endpoints. It exists only to
+turn a RuoYi token into a trusted application `userId`.
 
 Runtime flow:
 
 ```text
-agent-scope /api/auth/login
+client
   -> RuoYi Gateway /auth/login
-  -> ruoyi-auth TokenController.login
-  -> RuoYi native tenant, client, password, Sa-Token, and Redis logic
+  -> receives RuoYi access_token
+  -> calls agent-scope APIs with Authorization: Bearer <access_token>
+  -> agent-scope resolves userId from RuoYi/Sa-Token state
 ```
 
-The application keeps its current public endpoints:
-
-- `POST /api/auth/login`
-- `GET /api/auth/me`
-- `POST /api/auth/logout`
-
-`/api/auth/login` and `/api/auth/logout` proxy to the configured RuoYi gateway
-paths, which default to `/auth/login` and `/auth/logout`.
-
-Logged-in user lookup continues to read the configured token header, default
-`Authorization`, accept both `Bearer <token>` and raw token values, and resolve
-the login id through Sa-Token backed by the shared RuoYi Redis store.
+Business APIs must not trust a client-supplied `userId`. They call
+`AuthenticatedUserContext`, which reads the configured token header, default
+`Authorization`, accepts both `Bearer <token>` and raw token values, and
+resolves the login id through Sa-Token backed by the shared RuoYi Redis store.
 
 Required runtime configuration:
 
 ```properties
-AGENTSCOPE_RUOYI_BASE_URL=http://localhost:<ruoyi-gateway-port>
 AGENTSCOPE_RUOYI_TOKEN_NAME=Authorization
 AGENTSCOPE_RUOYI_REDIS_HOST=localhost
 AGENTSCOPE_RUOYI_REDIS_PORT=6379
 AGENTSCOPE_RUOYI_REDIS_DATABASE=0
 ```
 
-If RuoYi API encryption is enabled, this application does not implement RuoYi
-encryption itself. It transparently forwards the client request body to RuoYi
-and returns RuoYi's response body and status mapping.
+Removed from the target architecture:
+
+```text
+- RuoyiAuthProxyController
+- RuoyiAuthProxyClient
+- RuoyiAuthProxyConfig
+- RuoyiAuthProxySettings
+- RuoyiAuthProxyResponse
+- RuoyiAuthProxyException
+```
+
+Those classes belong to the previous proxy-login approach. With direct RuoYi
+login, they should be removed during implementation.
 
 ### interview
 
@@ -361,8 +359,9 @@ rewrite.
 
 ## Migration Strategy
 
-The package reorganization is a mechanical move plus import/package repair.
-It should not change behavior.
+The package reorganization is mostly a mechanical move plus import/package
+repair. The only intended behavior change is removing the old `agent-scope`
+authentication endpoint layer.
 
 Steps:
 
@@ -383,10 +382,8 @@ reverting them.
 
 Focused verification after migration:
 
-- Authentication tests:
+- Identity tests:
   - `RuoyiAuthConfigTest`
-  - `RuoyiAuthProxyControllerTest`
-  - `RuoyiAuthProxyClientTest`
   - `RuoyiSaTokenUserContextTest`
   - `DefaultSaTokenFacadeTest`
 - Interview tests:
@@ -417,10 +414,14 @@ tests and the missing dependency.
 
 - Production code no longer sits in one flat `com.example.demoscope` package.
 - Business capabilities are visible from the package tree.
-- RuoYi login remains proxied through the configured RuoYi gateway.
+- RuoYi login is performed directly against RuoYi-Cloud-Plus, outside
+  agent-scope.
+- agent-scope derives `userId` from the RuoYi token instead of trusting a
+  request-supplied `userId`.
 - Sa-Token login-state validation continues to use the shared RuoYi Redis
   store.
-- Existing public API paths remain unchanged.
+- Existing chat and interview API paths remain unchanged.
+- `agent-scope` no longer exposes its own `/api/auth/*` endpoints.
 - Spring component scanning still finds all controllers, services,
   configuration classes, and infrastructure beans.
 - Tests compile after package and import updates.
