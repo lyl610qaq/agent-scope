@@ -294,7 +294,7 @@
             runtimeBox.textContent = [
                 "聊天模型：" + (config.modelName || "未配置") +
                     (config.apiKeyConfigured ? " / API Key 已配置" : " / 缺少 API Key"),
-                "RuoYi 登录接口：" + (auth.loginPath || "/api/auth/login"),
+                "RuoYi Token 来源：请先在 RuoYi 登录后粘贴已签发 Token",
                 "RuoYi 鉴权 Header：" + tokenHeaderName,
                 "知识召回：" + (knowledge.vectorTopK || 0) +
                     " → " + (knowledge.finalTopN || 0),
