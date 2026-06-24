@@ -1,7 +1,7 @@
 package com.example.demoscope;
 
 import com.example.demoscope.testsupport.TestRedissonConfig;
-import com.example.demoscope.knowledge.domain.RetrievalSettings;
+import com.example.demoscope.domain.rag.RetrievalSettings;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
