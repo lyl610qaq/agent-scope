@@ -11,7 +11,8 @@ public record InterviewAgentTask(
         InterviewAgentName defaultAgent,
         int mainQuestionNumber,
         InterviewQuestion currentQuestion,
-        String candidateAnswer) {
+        String candidateAnswer,
+        String reviewFeedback) {
 
     public enum Type {
         GENERATE_MAIN_QUESTION,
@@ -41,6 +42,13 @@ public record InterviewAgentTask(
                     candidateAnswer,
                     "candidateAnswer");
         }
+        if (reviewFeedback != null && reviewFeedback.isBlank()) {
+            reviewFeedback = null;
+        }
+        if (type != Type.GENERATE_REPORT && reviewFeedback != null) {
+            throw new IllegalArgumentException(
+                    "reviewFeedback is only supported for report generation");
+        }
     }
 
     public static InterviewAgentTask generateMainQuestion(
@@ -55,6 +63,7 @@ public record InterviewAgentTask(
                         InterviewAgentName.JAVA_SKILL),
                 InterviewAgentName.JAVA_SKILL,
                 mainQuestionNumber,
+                null,
                 null,
                 null);
     }
@@ -74,10 +83,17 @@ public record InterviewAgentTask(
                 InterviewAgentName.INTERVIEWER,
                 question.mainQuestionNumber(),
                 question,
-                candidateAnswer);
+                candidateAnswer,
+                null);
     }
 
     public static InterviewAgentTask generateReport(InterviewSnapshot snapshot) {
+        return generateReport(snapshot, null);
+    }
+
+    public static InterviewAgentTask generateReport(
+            InterviewSnapshot snapshot,
+            String reviewFeedback) {
         Objects.requireNonNull(snapshot, "snapshot");
         return new InterviewAgentTask(
                 Type.GENERATE_REPORT,
@@ -85,6 +101,7 @@ public record InterviewAgentTask(
                 InterviewAgentName.SCORE,
                 snapshot.session().mainQuestionCount(),
                 null,
-                null);
+                null,
+                reviewFeedback);
     }
 }

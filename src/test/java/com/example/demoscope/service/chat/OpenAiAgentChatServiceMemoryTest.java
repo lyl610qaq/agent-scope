@@ -2,6 +2,8 @@ package com.example.demoscope.service.chat;
 
 import com.example.demoscope.service.chat.OpenAiAgentChatService;
 import com.example.demoscope.biz.chat.PromptContextBuilder;
+import com.example.demoscope.common.llm.TokenUsageContext;
+import com.example.demoscope.common.llm.TokenUsageContextHolder;
 import com.example.demoscope.domain.rag.KnowledgeChunk;
 import com.example.demoscope.common.llm.ChatTextModel;
 import com.example.demoscope.service.memory.MemoryOrchestrator;
@@ -32,9 +34,11 @@ class OpenAiAgentChatServiceMemoryTest {
         when(orchestrator.prepare("user-42", "conversation-a", "question")).thenReturn(context);
         AtomicReference<String> systemPrompt = new AtomicReference<>();
         AtomicReference<String> userPrompt = new AtomicReference<>();
+        AtomicReference<TokenUsageContext> tokenUsageContext = new AtomicReference<>();
         ChatTextModel model = (system, user) -> {
             systemPrompt.set(system);
             userPrompt.set(user);
+            tokenUsageContext.set(TokenUsageContextHolder.current());
             return "answer";
         };
         OpenAiAgentChatService service = new OpenAiAgentChatService(
@@ -48,6 +52,9 @@ class OpenAiAgentChatServiceMemoryTest {
         assertEquals("answer", answer);
         assertEquals("You are a helpful AI assistant.", systemPrompt.get());
         assertTrue(userPrompt.get().contains("AgentScope knowledge"));
+        assertEquals("CHAT", tokenUsageContext.get().businessType());
+        assertEquals("user-42", tokenUsageContext.get().userId());
+        assertEquals("conversation-a", tokenUsageContext.get().conversationId());
         verify(orchestrator).recordTurn("user-42", "conversation-a", "question", "answer");
     }
 

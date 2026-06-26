@@ -20,7 +20,7 @@ public final class InterviewAiJsonClient {
             String systemPrompt,
             String userPrompt,
             Class<T> type) {
-        String raw = model.generate(systemPrompt, userPrompt);
+        String raw = generate(systemPrompt, userPrompt);
         if (raw == null || raw.isBlank() || raw.contains("```")) {
             throw new InvalidOutputException("AI returned invalid JSON");
         }
@@ -31,6 +31,16 @@ public final class InterviewAiJsonClient {
                     "AI returned invalid JSON",
                     exception);
         }
+    }
+
+    private String generate(String systemPrompt, String userPrompt) {
+        TokenUsageContext current = TokenUsageContextHolder.current();
+        if (!"UNKNOWN".equals(current.businessType())) {
+            return model.generate(systemPrompt, userPrompt);
+        }
+        return TokenUsageContextHolder.callWithContext(
+                new TokenUsageContext(null, null, "INTERVIEW", null),
+                () -> model.generate(systemPrompt, userPrompt));
     }
 
     public static final class InvalidOutputException extends RuntimeException {

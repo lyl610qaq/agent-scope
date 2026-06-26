@@ -1,6 +1,8 @@
 package com.example.demoscope.service.interview;
 
 import com.example.demoscope.testsupport.interview.MutableInterviewRepository;
+import com.example.demoscope.common.llm.TokenUsageContext;
+import com.example.demoscope.common.llm.TokenUsageContextHolder;
 import com.example.demoscope.service.interview.InterviewService;
 import com.example.demoscope.domain.interview.InterviewAnswer;
 import com.example.demoscope.domain.interview.InterviewAnswerEvaluator;
@@ -27,6 +29,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,6 +80,27 @@ class InterviewServiceCreationTest {
         assertEquals(
                 "Explain HashMap",
                 result.currentQuestion().orElseThrow().text());
+    }
+
+    @Test
+    void generationRunsWithInterviewTokenUsageContext() {
+        AtomicReference<TokenUsageContext> context = new AtomicReference<>();
+        when(generator.generate(any(), eq(1))).thenAnswer(invocation -> {
+            context.set(TokenUsageContextHolder.current());
+            return new InterviewAiContracts.GeneratedQuestion(
+                    "Explain HashMap",
+                    List.of("JAVA"),
+                    List.of());
+        });
+
+        service.createOrResume(
+                USER_ID,
+                InterviewSession.Direction.JAVA_BACKEND,
+                InterviewSession.Difficulty.MIDDLE);
+
+        assertEquals("INTERVIEW", context.get().businessType());
+        assertEquals(USER_ID, context.get().userId());
+        assertEquals(INTERVIEW_ID.toString(), context.get().businessId());
     }
 
     @Test

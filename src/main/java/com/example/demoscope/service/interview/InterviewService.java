@@ -1,5 +1,7 @@
 package com.example.demoscope.service.interview;
 
+import com.example.demoscope.common.llm.TokenUsageContext;
+import com.example.demoscope.common.llm.TokenUsageContextHolder;
 import com.example.demoscope.domain.interview.InterviewAnswer;
 import com.example.demoscope.domain.interview.InterviewAnswerEvaluator;
 import com.example.demoscope.domain.interview.InterviewQuestion;
@@ -89,9 +91,12 @@ public final class InterviewService {
 
         InterviewAiContracts.GeneratedQuestion generated;
         try {
-            generated = questionGenerator.generate(
-                    snapshot,
-                    mainQuestionNumber);
+            InterviewSnapshot questionSnapshot = snapshot;
+            generated = withInterviewTokenUsageContext(
+                    questionSnapshot,
+                    () -> questionGenerator.generate(
+                            questionSnapshot,
+                            mainQuestionNumber));
         } catch (RuntimeException exception) {
             InterviewSnapshot latest = reload(snapshot);
             throw new InterviewServiceException(
@@ -169,10 +174,13 @@ public final class InterviewService {
 
         InterviewAiContracts.AnswerEvaluation evaluation;
         try {
-            evaluation = answerEvaluator.evaluate(
-                    snapshot,
-                    question,
-                    answerText);
+            InterviewSnapshot answerSnapshot = snapshot;
+            evaluation = withInterviewTokenUsageContext(
+                    answerSnapshot,
+                    () -> answerEvaluator.evaluate(
+                            answerSnapshot,
+                            question,
+                            answerText));
         } catch (RuntimeException exception) {
             throw new InterviewServiceException(
                     InterviewServiceException.Kind.AI_UNAVAILABLE,
@@ -290,8 +298,11 @@ public final class InterviewService {
 
         InterviewReport report;
         try {
+            InterviewSnapshot reportSnapshot = snapshot;
             InterviewAiContracts.ReportDraft draft = Objects.requireNonNull(
-                    reportGenerator.generate(snapshot),
+                    withInterviewTokenUsageContext(
+                            reportSnapshot,
+                            () -> reportGenerator.generate(reportSnapshot)),
                     "reportGenerator returned null");
             report = toReport(interviewId, draft, clock.instant());
         } catch (RuntimeException exception) {
@@ -415,5 +426,17 @@ public final class InterviewService {
                 InterviewServiceException.Kind.NOT_FOUND,
                 INTERVIEW_NOT_FOUND,
                 null);
+    }
+
+    private <T> T withInterviewTokenUsageContext(
+            InterviewSnapshot snapshot,
+            Supplier<T> operation) {
+        return TokenUsageContextHolder.callWithContext(
+                new TokenUsageContext(
+                        snapshot.session().userId(),
+                        null,
+                        "INTERVIEW",
+                        snapshot.session().id().toString()),
+                operation);
     }
 }

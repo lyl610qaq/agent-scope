@@ -33,10 +33,15 @@ public class ModelScoreAgent implements InterviewTargetAgent {
 
     @Override
     public InterviewAgentOutput run(AgentPromptContext context) {
+        String reviewFeedback = context.task().reviewFeedback() == null
+                ? "None"
+                : context.task().reviewFeedback();
         String prompt = """
                 Direction: %s
                 Difficulty: %s
                 Router focus: %s
+                Score review feedback:
+                %s
                 Evidence:
                 %s
                 Transcript:
@@ -47,6 +52,7 @@ public class ModelScoreAgent implements InterviewTargetAgent {
                 context.routerDecision() == null
                         ? ""
                         : context.routerDecision().suggestedFocus(),
+                reviewFeedback,
                 context.ragEvidence(),
                 InterviewTranscriptRenderer.transcript(context.snapshot()));
         return aiClient.call(

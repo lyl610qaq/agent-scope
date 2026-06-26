@@ -20,6 +20,7 @@ class OpenAiRequestLoggerTest {
         assertTrue(preview.contains("--url https://api.siliconflow.cn/v1/chat/completions"));
         assertTrue(preview.contains("Authorization: Bearer sk-1...cdef"));
         assertTrue(preview.contains("\"model\": \"Pro/zai-org/GLM-4.7\""));
+        assertTrue(preview.contains("\"stream\": false"));
         assertTrue(preview.contains("{\"role\": \"user\", \"content\": \"hello \\\"agent\\\"\"}"));
         assertFalse(preview.contains("sk-1234567890abcdef"));
     }
@@ -36,5 +37,18 @@ class OpenAiRequestLoggerTest {
 
         assertTrue(preview.contains("--url https://api.siliconflow.cn/v1/chat/completions"));
         assertTrue(preview.contains("Local knowledge base:\\n[1] demo.md\\nRAG enabled"));
+    }
+
+    @Test
+    void streamingPreviewShowsStreamFlag() {
+        OpenAiRequestLogger requestLogger = new OpenAiRequestLogger();
+
+        String preview = requestLogger.buildStreamingRequestPreview(
+                "sk-1234567890abcdef",
+                "https://api.siliconflow.cn/v1",
+                "Pro/zai-org/GLM-4.7",
+                "hello");
+
+        assertTrue(preview.contains("\"stream\": true"));
     }
 }

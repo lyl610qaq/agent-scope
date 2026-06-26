@@ -112,6 +112,49 @@ class ModelInterviewAgentTest {
     }
 
     @Test
+    void scoreAgentIncludesReviewerInstructionsWhenRegeneratingReport() {
+        CapturingModel model = new CapturingModel("""
+                {"agentName":"SCORE","type":"SCORE_REPORT",
+                "reportDraft":{"overallScore":78,
+                "scores":{"javaFundamentals":78,"concurrency":65,"jvm":70,
+                "spring":82,"database":78,"engineering":85},
+                "strengths":["clear"],"weaknesses":["depth"],
+                "improvementSuggestions":["practice"]},
+                "usedEvidenceIds":["doc-1"]}
+                """);
+        InterviewTargetAgent agent = new ModelScoreAgent(
+                new InterviewAiJsonClient(model, new ObjectMapper()));
+
+        agent.run(reportContext("Lower concurrency and overall score."));
+
+        assertTrue(model.lastPrompt.contains("Score review feedback"));
+        assertTrue(model.lastPrompt.contains(
+                "Lower concurrency and overall score."));
+    }
+
+    @Test
+    void scoreReviewAgentReturnsDecisionForDraftReport() {
+        CapturingModel model = new CapturingModel("""
+                {"approved":false,
+                "reason":"Concurrency score is too high.",
+                "revisionInstructions":"Lower concurrency and overall score."}
+                """);
+        ScoreReviewAgent agent = new ModelScoreReviewAgent(
+                new InterviewAiJsonClient(model, new ObjectMapper()));
+
+        ScoreReviewDecision decision = agent.review(
+                snapshot(true),
+                reportDraft(92));
+
+        assertEquals(false, decision.approved());
+        assertEquals(
+                "Lower concurrency and overall score.",
+                decision.revisionInstructions());
+        assertTrue(model.lastPrompt.contains("candidate answer"));
+        assertTrue(model.lastPrompt.contains("overallScore=92"));
+    }
+
+    @Test
     void memoryManagerReturnsWriteDecision() {
         CapturingModel model = new CapturingModel("""
                 {"shortTermWrites":["needs follow-up"],
@@ -155,10 +198,14 @@ class ModelInterviewAgentTest {
     }
 
     private AgentPromptContext reportContext() {
+        return reportContext(null);
+    }
+
+    private AgentPromptContext reportContext(String reviewFeedback) {
         InterviewSnapshot snapshot = snapshot(true);
         return new AgentPromptContext(
                 snapshot,
-                InterviewAgentTask.generateReport(snapshot),
+                InterviewAgentTask.generateReport(snapshot, reviewFeedback),
                 null,
                 null,
                 List.of(),
@@ -170,6 +217,21 @@ class ModelInterviewAgentTest {
                         1.0,
                         "overall score",
                         List.of("doc-1")));
+    }
+
+    private InterviewAiContracts.ReportDraft reportDraft(int overallScore) {
+        return new InterviewAiContracts.ReportDraft(
+                overallScore,
+                new InterviewAiContracts.ScoreBreakdown(
+                        overallScore,
+                        75,
+                        70,
+                        82,
+                        78,
+                        85),
+                List.of("clear"),
+                List.of("depth"),
+                List.of("practice"));
     }
 
     private InterviewSnapshot snapshot(boolean answered) {

@@ -3,11 +3,12 @@ package com.example.demoscope.config.interview;
 import com.example.demoscope.biz.auth.AuthenticatedUserContext;
 import com.example.demoscope.biz.interview.AgenticInterviewAnswerEvaluator;
 import com.example.demoscope.biz.interview.AgenticInterviewQuestionGenerator;
-import com.example.demoscope.biz.interview.AgenticInterviewReportGenerator;
 import com.example.demoscope.biz.interview.InterviewAgentOrchestrator;
 import com.example.demoscope.biz.interview.InterviewMemoryManagerAgent;
 import com.example.demoscope.biz.interview.InterviewRagPlannerAgent;
 import com.example.demoscope.biz.interview.InterviewRouterAgent;
+import com.example.demoscope.biz.interview.ScoreReviewAgent;
+import com.example.demoscope.biz.interview.ScoreReviewBiz;
 import com.example.demoscope.controller.interview.InterviewController;
 import com.example.demoscope.biz.rag.InterviewEvidenceProvider;
 import com.example.demoscope.biz.memory.InterviewMemoryContextProvider;
@@ -77,6 +78,7 @@ class InterviewConfigTest {
                     assertThat(context).hasBean("projectAgent");
                     assertThat(context).hasBean("javaSkillAgent");
                     assertThat(context).hasBean("scoreAgent");
+                    assertThat(context).hasSingleBean(ScoreReviewAgent.class);
                     assertThat(context.getBean(InterviewQuestionGenerator.class))
                             .isInstanceOf(
                                     AgenticInterviewQuestionGenerator.class);
@@ -85,7 +87,7 @@ class InterviewConfigTest {
                                     AgenticInterviewAnswerEvaluator.class);
                     assertThat(context.getBean(InterviewReportGenerator.class))
                             .isInstanceOf(
-                                    AgenticInterviewReportGenerator.class);
+                                    ScoreReviewBiz.class);
                     assertThat(context).hasSingleBean(InterviewService.class);
                     assertThat(context).hasSingleBean(InterviewController.class);
                     assertThat(context).hasSingleBean(ChatTextModel.class);

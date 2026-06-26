@@ -4,12 +4,16 @@ import com.example.demoscope.common.llm.AgentScopeChatTextModel;
 import com.example.demoscope.biz.auth.BearerTokenExtractor;
 import com.example.demoscope.biz.chat.PromptContextBuilder;
 import com.example.demoscope.common.embedding.EmbeddingClient;
+import com.example.demoscope.common.jdbc.JdbcTokenUsageRecorder;
 import com.example.demoscope.domain.rag.KnowledgeRetriever;
 import com.example.demoscope.domain.rag.RetrievalSettings;
 import com.example.demoscope.common.pgvector.PgVectorKnowledgeStore;
 import com.example.demoscope.common.embedding.SiliconFlowEmbeddingClient;
 import com.example.demoscope.common.llm.ChatTextModel;
+import com.example.demoscope.common.llm.NoopTokenUsageRecorder;
 import com.example.demoscope.common.llm.OpenAiRequestLogger;
+import com.example.demoscope.common.llm.StreamingChatTextModel;
+import com.example.demoscope.common.llm.TokenUsageRecorder;
 import com.example.demoscope.biz.memory.LongTermMemoryPolicy;
 import com.example.demoscope.service.memory.MemoryOrchestrator;
 import com.example.demoscope.domain.memory.LongTermMemoryExtractor;
@@ -30,6 +34,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -73,12 +78,31 @@ public class AgentMemoryConfig {
     }
 
     @Bean
-    ChatTextModel chatTextModel(
+    StreamingChatTextModel chatTextModel(
             @Value("${agentscope.openai.api-key:}") String apiKey,
             @Value("${agentscope.openai.model-name:Pro/zai-org/GLM-4.7}") String modelName,
             @Value("${agentscope.openai.base-url:}") String baseUrl,
-            OpenAiRequestLogger requestLogger) {
-        return new AgentScopeChatTextModel(apiKey, modelName, baseUrl, requestLogger);
+            OpenAiRequestLogger requestLogger,
+            TokenUsageRecorder tokenUsageRecorder,
+            Clock clock) {
+        return new AgentScopeChatTextModel(apiKey, modelName, baseUrl, requestLogger, tokenUsageRecorder, clock);
+    }
+
+    @Bean
+    @ConditionalOnBean(JdbcOperations.class)
+    @ConditionalOnMissingBean(TokenUsageRecorder.class)
+    TokenUsageRecorder jdbcTokenUsageRecorder(
+            JdbcOperations jdbc,
+            Clock clock) {
+        JdbcTokenUsageRecorder recorder = new JdbcTokenUsageRecorder(jdbc, clock);
+        recorder.initializeSchema();
+        return recorder;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(TokenUsageRecorder.class)
+    TokenUsageRecorder noopTokenUsageRecorder() {
+        return new NoopTokenUsageRecorder();
     }
 
     @Bean

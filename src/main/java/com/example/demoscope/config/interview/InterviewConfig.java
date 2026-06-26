@@ -15,6 +15,10 @@ import com.example.demoscope.biz.interview.ModelInterviewRouterAgent;
 import com.example.demoscope.biz.interview.ModelJavaSkillAgent;
 import com.example.demoscope.biz.interview.ModelProjectAgent;
 import com.example.demoscope.biz.interview.ModelScoreAgent;
+import com.example.demoscope.biz.interview.ModelScoreReviewAgent;
+import com.example.demoscope.biz.interview.ScoreDraftGenerator;
+import com.example.demoscope.biz.interview.ScoreReviewAgent;
+import com.example.demoscope.biz.interview.ScoreReviewBiz;
 import com.example.demoscope.biz.memory.DefaultInterviewMemoryWriter;
 import com.example.demoscope.biz.rag.InterviewEvidenceProvider;
 import com.example.demoscope.biz.memory.InterviewMemoryContextProvider;
@@ -112,6 +116,11 @@ public class InterviewConfig {
     }
 
     @Bean
+    ScoreReviewAgent scoreReviewAgent(InterviewAiJsonClient aiClient) {
+        return new ModelScoreReviewAgent(aiClient);
+    }
+
+    @Bean
     InterviewMemoryContextProvider interviewMemoryContextProvider(
             ShortTermMemoryStore shortTermMemoryStore,
             LongTermMemoryRepository longTermMemoryRepository,
@@ -170,9 +179,23 @@ public class InterviewConfig {
     }
 
     @Bean
-    InterviewReportGenerator interviewReportGenerator(
+    ScoreDraftGenerator scoreDraftGenerator(
             InterviewAgentOrchestrator orchestrator) {
-        return new AgenticInterviewReportGenerator(orchestrator);
+        AgenticInterviewReportGenerator generator =
+                new AgenticInterviewReportGenerator(orchestrator);
+        return generator::generate;
+    }
+
+    @Bean
+    InterviewReportGenerator interviewReportGenerator(
+            ScoreDraftGenerator scoreDraftGenerator,
+            ScoreReviewAgent scoreReviewAgent,
+            @Value("${agentscope.interview.score-review.max-attempts:2}")
+            int maxAttempts) {
+        return new ScoreReviewBiz(
+                scoreDraftGenerator,
+                scoreReviewAgent,
+                maxAttempts);
     }
 
     @Bean

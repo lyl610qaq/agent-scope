@@ -80,9 +80,15 @@ public class InterviewAgentOrchestrator {
 
     public InterviewAiContracts.ReportDraft generateReport(
             InterviewSnapshot snapshot) {
+        return generateReport(snapshot, null);
+    }
+
+    public InterviewAiContracts.ReportDraft generateReport(
+            InterviewSnapshot snapshot,
+            String reviewFeedback) {
         InterviewAgentOutput output = run(
                 snapshot,
-                InterviewAgentTask.generateReport(snapshot));
+                InterviewAgentTask.generateReport(snapshot, reviewFeedback));
         return output.reportDraft();
     }
 

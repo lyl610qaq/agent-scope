@@ -11,10 +11,29 @@ public class OpenAiRequestLogger {
     private static final Logger log = LoggerFactory.getLogger(OpenAiRequestLogger.class);
 
     public void logChatRequest(String apiKey, String baseUrl, String modelName, String userMessage) {
-        log.info("AgentScope OpenAI compatible request:\n{}", buildRequestPreview(apiKey, baseUrl, modelName, userMessage));
+        log.info("AgentScope OpenAI compatible request:\n{}",
+                buildRequestPreview(apiKey, baseUrl, modelName, userMessage));
+    }
+
+    public void logStreamingChatRequest(String apiKey, String baseUrl, String modelName, String userMessage) {
+        log.info("AgentScope OpenAI compatible streaming request:\n{}",
+                buildStreamingRequestPreview(apiKey, baseUrl, modelName, userMessage));
     }
 
     String buildRequestPreview(String apiKey, String baseUrl, String modelName, String userMessage) {
+        return buildRequestPreview(apiKey, baseUrl, modelName, userMessage, false);
+    }
+
+    String buildStreamingRequestPreview(String apiKey, String baseUrl, String modelName, String userMessage) {
+        return buildRequestPreview(apiKey, baseUrl, modelName, userMessage, true);
+    }
+
+    private String buildRequestPreview(
+            String apiKey,
+            String baseUrl,
+            String modelName,
+            String userMessage,
+            boolean stream) {
         String normalizedBaseUrl = normalizeBaseUrl(baseUrl);
         return """
                 curl --request POST \\
@@ -25,7 +44,7 @@ public class OpenAiRequestLogger {
                 """.formatted(
                 normalizedBaseUrl,
                 maskApiKey(apiKey),
-                buildBody(modelName, userMessage));
+                buildBody(modelName, userMessage, stream));
     }
 
     private String normalizeBaseUrl(String baseUrl) {
@@ -49,16 +68,17 @@ public class OpenAiRequestLogger {
         return value.substring(0, 4) + "..." + value.substring(value.length() - 4);
     }
 
-    private String buildBody(String modelName, String userMessage) {
+    private String buildBody(String modelName, String userMessage, boolean stream) {
         return """
                 {
                   "model": "%s",
+                  "stream": %s,
                   "messages": [
                     {"role": "system", "content": "You are a helpful AI assistant."},
                     {"role": "user", "content": "%s"}
                   ]
                 }
-                """.formatted(escapeJson(modelName), escapeJson(userMessage));
+                """.formatted(escapeJson(modelName), stream, escapeJson(userMessage));
     }
 
     private String escapeJson(String value) {

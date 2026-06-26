@@ -1,24 +1,26 @@
 package com.example.demoscope.service.chat;
 
 import com.example.demoscope.biz.chat.PromptContextBuilder;
-import com.example.demoscope.common.llm.ChatTextModel;
+import com.example.demoscope.common.llm.StreamingChatTextModel;
 import com.example.demoscope.common.llm.TokenUsageContext;
 import com.example.demoscope.common.llm.TokenUsageContextHolder;
-import com.example.demoscope.service.memory.MemoryOrchestrator;
 import com.example.demoscope.domain.memory.MemoryContext;
+import com.example.demoscope.service.memory.MemoryOrchestrator;
+import java.util.Objects;
+import java.util.function.Consumer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
-public class OpenAiAgentChatService implements AgentChatService {
+public class StreamingAgentChatService {
 
-    private final ChatTextModel chatTextModel;
+    private final StreamingChatTextModel chatTextModel;
     private final MemoryOrchestrator memoryOrchestrator;
     private final PromptContextBuilder promptContextBuilder;
     private final String systemPrompt;
 
-    public OpenAiAgentChatService(
-            ChatTextModel chatTextModel,
+    public StreamingAgentChatService(
+            StreamingChatTextModel chatTextModel,
             MemoryOrchestrator memoryOrchestrator,
             PromptContextBuilder promptContextBuilder,
             @Value("${agentscope.chat.system-prompt:You are a helpful AI assistant.}") String systemPrompt) {
@@ -28,16 +30,27 @@ public class OpenAiAgentChatService implements AgentChatService {
         this.systemPrompt = systemPrompt;
     }
 
-    @Override
-    public String chat(String userId, String conversationId, String message) {
+    public String chat(
+            String userId,
+            String conversationId,
+            String message,
+            Consumer<String> onDelta) {
+        Objects.requireNonNull(onDelta, "onDelta");
         return TokenUsageContextHolder.callWithContext(
                 new TokenUsageContext(userId, conversationId, "CHAT", null),
                 () -> {
                     MemoryContext memoryContext = memoryOrchestrator.prepare(userId, conversationId, message);
                     String modelPrompt = promptContextBuilder.build(systemPrompt, memoryContext, message);
-                    String answer = chatTextModel.generate(systemPrompt, modelPrompt);
-                    memoryOrchestrator.recordTurn(userId, conversationId, message, answer);
-                    return answer;
+                    StringBuilder answer = new StringBuilder();
+
+                    chatTextModel.generateStream(systemPrompt, modelPrompt, delta -> {
+                        answer.append(delta);
+                        onDelta.accept(delta);
+                    });
+
+                    String completedAnswer = answer.toString();
+                    memoryOrchestrator.recordTurn(userId, conversationId, message, completedAnswer);
+                    return completedAnswer;
                 });
     }
 }

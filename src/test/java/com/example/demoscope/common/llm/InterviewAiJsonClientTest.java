@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class InterviewAiJsonClientTest {
@@ -93,6 +94,24 @@ class InterviewAiJsonClientTest {
                                 "system",
                                 "prompt",
                                 InterviewAiContracts.ReportDraft.class));
+    }
+
+    @Test
+    void usesInterviewTokenUsageContextWhenNoContextExists() {
+        AtomicReference<TokenUsageContext> context = new AtomicReference<>();
+        ChatTextModel model = (system, prompt) -> {
+            context.set(TokenUsageContextHolder.current());
+            return """
+                    {"question":"Explain HashMap","skillTags":["JAVA"],"evidenceIds":[]}
+                    """;
+        };
+
+        new InterviewAiJsonClient(model, new ObjectMapper()).call(
+                "system",
+                "prompt",
+                InterviewAiContracts.GeneratedQuestion.class);
+
+        assertEquals("INTERVIEW", context.get().businessType());
     }
 
     private String reportJson(int overallScore) {

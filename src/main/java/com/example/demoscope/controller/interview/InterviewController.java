@@ -3,8 +3,6 @@ package com.example.demoscope.controller.interview;
 import com.example.demoscope.biz.auth.AuthenticatedUserContext;
 import com.example.demoscope.domain.auth.UnauthenticatedUserException;
 import com.example.demoscope.service.interview.InterviewService;
-import com.example.demoscope.domain.interview.InterviewQuestion;
-import com.example.demoscope.domain.interview.InterviewReport;
 import com.example.demoscope.domain.interview.InterviewServiceException;
 import com.example.demoscope.domain.interview.InterviewSession;
 import com.example.demoscope.domain.interview.InterviewSnapshot;
@@ -34,6 +32,7 @@ public class InterviewController {
 
     private final InterviewService service;
     private final AuthenticatedUserContext authenticatedUserContext;
+    private final InterviewResponseMapper responseMapper = new InterviewResponseMapper();
 
     public InterviewController(
             InterviewService service,
@@ -119,7 +118,7 @@ public class InterviewController {
                     == InterviewServiceException.Kind.AI_UNAVAILABLE
                     && exception.snapshot() != null) {
                 return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                        .body(toResponse(exception.snapshot()));
+                        .body(responseMapper.toResponse(exception.snapshot()));
             }
             throw new ResponseStatusException(
                     status(exception.kind()),
@@ -134,49 +133,7 @@ public class InterviewController {
                 == InterviewSession.Status.SCORING_PENDING
                 ? HttpStatus.ACCEPTED
                 : HttpStatus.OK;
-        return ResponseEntity.status(status).body(toResponse(snapshot));
-    }
-
-    private InterviewResponse toResponse(InterviewSnapshot snapshot) {
-        InterviewSession session = snapshot.session();
-        InterviewQuestion current = snapshot.currentQuestion().orElse(null);
-        int mainQuestionNumber = current == null
-                ? session.mainQuestionCount()
-                : current.mainQuestionNumber();
-        int followUpNumber = current == null
-                ? 0
-                : current.followUpNumber();
-        QuestionResponse question = current == null
-                ? null
-                : new QuestionResponse(current.id(), current.text());
-        ReportResponse report = snapshot.report() == null
-                ? null
-                : ReportResponse.from(snapshot.report());
-        return new InterviewResponse(
-                session.id(),
-                session.status(),
-                session.direction(),
-                session.difficulty(),
-                mainQuestionNumber,
-                followUpNumber,
-                nextAction(session.status(), current),
-                question,
-                report);
-    }
-
-    private NextAction nextAction(
-            InterviewSession.Status status,
-            InterviewQuestion current) {
-        return switch (status) {
-            case SCORING_PENDING -> NextAction.REPORT_PENDING;
-            case COMPLETED -> NextAction.REPORT;
-            case CANCELLED -> NextAction.CANCELLED;
-            case QUESTION_GENERATION_PENDING -> NextAction.MAIN_QUESTION;
-            case IN_PROGRESS -> current != null
-                    && current.type() == InterviewQuestion.Type.FOLLOW_UP
-                            ? NextAction.FOLLOW_UP
-                            : NextAction.MAIN_QUESTION;
-        };
+        return ResponseEntity.status(status).body(responseMapper.toResponse(snapshot));
     }
 
     private HttpStatus status(InterviewServiceException.Kind kind) {
@@ -236,19 +193,5 @@ public class InterviewController {
             List<String> strengths,
             List<String> weaknesses,
             List<String> improvementSuggestions) {
-
-        private static ReportResponse from(InterviewReport report) {
-            return new ReportResponse(
-                    report.overallScore(),
-                    report.javaFundamentalsScore(),
-                    report.concurrencyScore(),
-                    report.jvmScore(),
-                    report.springScore(),
-                    report.databaseScore(),
-                    report.engineeringScore(),
-                    report.strengths(),
-                    report.weaknesses(),
-                    report.improvementSuggestions());
-        }
     }
 }

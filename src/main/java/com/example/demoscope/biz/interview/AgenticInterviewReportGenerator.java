@@ -5,7 +5,7 @@ import com.example.demoscope.domain.interview.InterviewSnapshot;
 import com.example.demoscope.domain.interview.InterviewAiContracts;
 
 public class AgenticInterviewReportGenerator
-        implements InterviewReportGenerator {
+        implements InterviewReportGenerator, ScoreDraftGenerator {
 
     private final InterviewAgentOrchestrator orchestrator;
 
@@ -16,6 +16,13 @@ public class AgenticInterviewReportGenerator
 
     @Override
     public InterviewAiContracts.ReportDraft generate(InterviewSnapshot snapshot) {
-        return orchestrator.generateReport(snapshot);
+        return generate(snapshot, null);
+    }
+
+    @Override
+    public InterviewAiContracts.ReportDraft generate(
+            InterviewSnapshot snapshot,
+            String reviewFeedback) {
+        return orchestrator.generateReport(snapshot, reviewFeedback);
     }
 }
