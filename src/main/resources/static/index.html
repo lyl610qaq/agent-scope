@@ -57,7 +57,7 @@
         }
 
         h1 {
-            margin: 8px 0 8px;
+            margin: 8px 0;
             font-size: 28px;
             line-height: 1.2;
             letter-spacing: 0;
@@ -226,8 +226,8 @@
         <div class="eyebrow">Memory Workspace</div>
         <h1>AgentScope Java Demo 记忆工作台</h1>
         <p>
-            在同一会话中连续提问，短期记忆、长期记忆与向量知识库会共同组成模型上下文。
-            登录和用户管理由 RuoYi-Cloud-Plus 后端负责，当前页面只发送登录 token。
+            在同一会话里连续提问，短期记忆、长期记忆与向量知识库会共同组成模型上下文。
+            登录和用户管理由 RuoYi-Cloud-Plus 后端负责，当前页面只发送已登录后的 RuoYi token。
         </p>
     </section>
 
@@ -249,10 +249,10 @@
 
         <div class="panel">
             <label for="answer">回答</label>
-            <div id="answer" class="answer-box">模型回答会显示在这里。</div>
+            <div id="answer" class="answer-box">模型回答会流式显示在这里。</div>
             <div class="tips">
-                短期记忆保存在当前进程；长期记忆在 pgvector 启用后按 RuoYi 用户写入 PostgreSQL；
-                <code>data/knowledge</code> 中的知识可通过 pgvector 召回。
+                聊天使用 <code>/ws/chat</code> WebSocket 流式输出；短期记忆保存在当前进程；
+                长期记忆在 pgvector 启用后按 RuoYi 用户写入 PostgreSQL。
             </div>
             <div id="runtime" class="runtime">正在加载运行状态...</div>
         </div>
@@ -270,6 +270,7 @@
     const tokenStorageKey = "agentscope.ruoyiToken";
     let tokenHeaderName = "Authorization";
     let conversationId = sessionStorage.getItem(conversationStorageKey);
+    let activeSocket = null;
 
     if (!conversationId) {
         conversationId = typeof crypto.randomUUID === "function"
@@ -287,17 +288,18 @@
         try {
             const response = await fetch("/api/config");
             const config = await response.json();
-            tokenHeaderName = config.ruoyiTokenName || "Authorization";
+            const auth = config.ruoyiAuth || {};
+            const knowledge = config.knowledge || {};
+            const longTermMemory = config.longTermMemory || {};
+            tokenHeaderName = auth.tokenHeaderName || "Authorization";
             runtimeBox.textContent = [
                 "聊天模型：" + (config.modelName || "未配置") +
                     (config.apiKeyConfigured ? " / API Key 已配置" : " / 缺少 API Key"),
-                "Embedding：" + (config.embeddingModel || "未配置") +
-                    (config.embeddingApiKeyConfigured ? " / API Key 已配置" : " / 缺少 API Key"),
-                "pgvector：" + (config.pgVectorConfigured ? "已配置" : "未启用或未配置"),
-                "RuoYi 鉴权：" + (config.ruoyiAuthEnabled ? "已启用" : "未启用") +
-                    " / Header " + tokenHeaderName,
-                "长期记忆 Top-K：" + (config.longTermMemoryTopK || 5),
-                "知识目录：" + (config.ragKnowledgeDir || "data/knowledge"),
+                "WebSocket：/ws/chat",
+                "RuoYi token 来源：请先在 RuoYi 登录后粘贴已签发 token",
+                "RuoYi 鉴权 Header：" + tokenHeaderName,
+                "知识召回：" + (knowledge.vectorTopK || 0) + " -> " + (knowledge.finalTopN || 0),
+                "长期记忆召回：" + (longTermMemory.vectorTopK || 0) + " -> " + (longTermMemory.finalTopN || 0),
                 "当前会话：" + conversationId
             ].join("\n");
         } catch (error) {
@@ -305,7 +307,12 @@
         }
     }
 
-    async function sendPrompt() {
+    function webSocketUrl(path) {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        return protocol + "//" + window.location.host + path;
+    }
+
+    function sendPrompt() {
         const message = promptInput.value.trim();
         if (!message) {
             statusText.textContent = "请输入消息";
@@ -313,49 +320,59 @@
             return;
         }
 
-        sendButton.disabled = true;
-        statusText.textContent = "正在请求...";
-        answerBox.textContent = "正在等待回答...";
-
-        try {
-            const token = tokenInput.value.trim();
-            const headers = { "Content-Type": "application/json" };
-            if (token) {
-                headers[tokenHeaderName] = token.toLowerCase().startsWith("bearer ")
-                    ? token
-                    : "Bearer " + token;
-            }
-
-            const response = await fetch("/api/chat", {
-                method: "POST",
-                headers,
-                body: JSON.stringify({ conversationId, message })
-            });
-
-            const text = await response.text();
-            let payload = null;
-
-            if (text) {
-                try {
-                    payload = JSON.parse(text);
-                } catch (error) {
-                    payload = null;
-                }
-            }
-
-            if (!response.ok) {
-                const messageText = payload && payload.message ? payload.message : text || "Request failed.";
-                throw new Error(messageText);
-            }
-
-            answerBox.textContent = payload && payload.answer ? payload.answer : "模型没有返回内容。";
-            statusText.textContent = "已完成";
-        } catch (error) {
-            answerBox.textContent = "请求失败：" + error.message;
-            statusText.textContent = "失败";
-        } finally {
-            sendButton.disabled = false;
+        if (activeSocket && activeSocket.readyState === WebSocket.OPEN) {
+            activeSocket.close();
         }
+
+        sendButton.disabled = true;
+        statusText.textContent = "连接中...";
+        answerBox.textContent = "";
+
+        const socket = new WebSocket(webSocketUrl("/ws/chat"));
+        activeSocket = socket;
+
+        socket.onopen = () => {
+            statusText.textContent = "流式输出中...";
+            socket.send(JSON.stringify({
+                token: tokenInput.value.trim(),
+                conversationId,
+                message
+            }));
+        };
+
+        socket.onmessage = (event) => {
+            const payload = JSON.parse(event.data);
+            if (payload.type === "start") {
+                answerBox.textContent = "";
+                return;
+            }
+            if (payload.type === "delta") {
+                answerBox.textContent += payload.content || "";
+                return;
+            }
+            if (payload.type === "error") {
+                answerBox.textContent = "请求失败：" + (payload.message || "未知错误");
+                statusText.textContent = "失败";
+                socket.close();
+                return;
+            }
+            if (payload.type === "done") {
+                statusText.textContent = "已完成";
+                socket.close();
+            }
+        };
+
+        socket.onerror = () => {
+            answerBox.textContent = "WebSocket 连接失败，请检查服务是否已启动。";
+            statusText.textContent = "失败";
+        };
+
+        socket.onclose = () => {
+            sendButton.disabled = false;
+            if (activeSocket === socket) {
+                activeSocket = null;
+            }
+        };
     }
 
     sendButton.addEventListener("click", sendPrompt);
